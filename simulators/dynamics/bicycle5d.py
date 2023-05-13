@@ -10,6 +10,7 @@ from jaxlib.xla_extension import DeviceArray
 import jax
 from jax import numpy as jnp
 from jax import custom_jvp
+from jax import random
 
 from .base_dynamics import BaseDynamics
 
@@ -31,7 +32,7 @@ class Bicycle5D(BaseDynamics):
     self.wheelbase: float = config.WHEELBASE  # vehicle chassis length
     self.delta_min = config.DELTA_MIN
     self.delta_max = config.DELTA_MAX
-    self.v_min = config.V_MIN
+    self.v_min = 0
     self.v_max = config.V_MAX
 
   @partial(jax.jit, static_argnames='self')
@@ -49,19 +50,7 @@ class Bicycle5D(BaseDynamics):
     # Clips the controller values between min and max accel and steer values.
     ctrl_clip = jnp.clip(control, self.ctrl_space[:, 0], self.ctrl_space[:, 1])
 
-    state_nxt = self._integrate_forward_dt(state, ctrl_clip, self.dt)
-
-    state_nxt = state_nxt.at[2].set(
-         jnp.clip(state_nxt[2], self.v_min, self.v_max)
-    )
-
-    state_nxt = state_nxt.at[4].set(
-         jnp.clip(state_nxt[4], self.delta_min, self.delta_max)
-    )
-
-    state_nxt = state_nxt.at[3].set(
-        jnp.mod(state_nxt[3] + jnp.pi, 2 * jnp.pi) - jnp.pi
-    )
+    state_nxt = self._integrate_forward(state, ctrl_clip)
 
     return state_nxt, ctrl_clip
 
@@ -98,18 +87,32 @@ class Bicycle5D(BaseDynamics):
 
   @partial(jax.jit, static_argnames='self')
   def _integrate_forward_dt(
-      self, state: DeviceArray, control: DeviceArray, dt: float
+      self, state: DeviceArray, control: DeviceArray, dt:float
   ) -> DeviceArray:
-    k1 = self.disc_deriv(state, control)
-    k2 = self.disc_deriv(state + k1*dt/2, control)
-    k3 = self.disc_deriv(state + k2*dt/2, control)
-    k4 = self.disc_deriv(state + k3*dt, control)
-    return state + (k1 + 2*k2 + 2*k3 + k4) * dt / 6
+    ctrl_clip = jnp.clip(control, self.ctrl_space[:, 0], self.ctrl_space[:, 1])
+    k1 = self.disc_deriv(state, ctrl_clip)
+    k2 = self.disc_deriv(state + k1*dt/2, ctrl_clip)
+    k3 = self.disc_deriv(state + k2*dt/2, ctrl_clip)
+    k4 = self.disc_deriv(state + k3*dt, ctrl_clip)
+    
+    state_nxt = state + (k1 + 2*k2 + 2*k3 + k4) * dt / 6
+    state_nxt = state_nxt.at[2].set(
+         jnp.clip(state_nxt[2], self.v_min, self.v_max)
+    )
+    
+    state_nxt = state_nxt.at[4].set(
+         jnp.clip(state_nxt[4], self.delta_min, self.delta_max)
+    )
+
+    state_nxt = state_nxt.at[3].set(
+        jnp.mod(state_nxt[3] + jnp.pi, 2 * jnp.pi) - jnp.pi
+    )
+
+    return state_nxt
   
-  """
   @partial(jax.jit, static_argnames='self')
   def get_jacobian_fx(
-      self, obs: DeviceArray, action: DeviceArray
+      self, obs: DeviceArray, control: DeviceArray
   ) -> Tuple[DeviceArray, DeviceArray]:
       Ac = jnp.array([[0, 0, jnp.cos(obs[3]), -obs[2]*jnp.sin(obs[3]), 0],
                       [0, 0, jnp.sin(obs[3]), obs[2]*jnp.cos(obs[3]), 0],
@@ -123,7 +126,7 @@ class Bicycle5D(BaseDynamics):
   
   @partial(jax.jit, static_argnames='self')
   def get_jacobian_fu(
-      self, obs: DeviceArray, action: DeviceArray
+      self, obs: DeviceArray, control: DeviceArray
   ) -> DeviceArray: 
       Ac = jnp.array([[0, 0, jnp.cos(obs[3]), -obs[2]*jnp.sin(obs[3]), 0],
                       [0, 0, jnp.sin(obs[3]), obs[2]*jnp.cos(obs[3]), 0],
@@ -140,4 +143,32 @@ class Bicycle5D(BaseDynamics):
       Bd = self.dt * Bc
 
       return Bd
+  
   """
+  @partial(jax.jit, static_argnames='self')
+  def get_jacobian(
+      self, nominal_states: DeviceArray, nominal_controls: DeviceArray
+  ) -> Tuple[DeviceArray, DeviceArray]:
+    jac = jax.jit(jax.vmap(self.get_jacobian_fx_fu, in_axes=(1, 1), out_axes=(2, 2)))
+    return jac(nominal_states, nominal_controls)
+  """
+
+  @partial(jax.jit, static_argnames='self')
+  def get_jacobian_fx_fu(self, obs: DeviceArray, control: DeviceArray) -> Tuple:
+      Ac = jnp.array([[0, 0, jnp.cos(obs[3]), -obs[2]*jnp.sin(obs[3]), 0],
+                      [0, 0, jnp.sin(obs[3]), obs[2]*jnp.cos(obs[3]), 0],
+                      [0, 0, 0, 0, 0],
+                      [0, 0, jnp.tan(obs[4])/self.wheelbase, 0, obs[2]/(1e-6 + self.wheelbase*jnp.cos(obs[4])**2)],
+                      [0, 0, 0, 0, 0]])
+      
+      Bc = np.array([[0, 0],
+                      [0, 0],
+                      [1, 0],
+                      [0, 0],
+                      [0, 1]])
+      
+      Ad = jnp.eye(self.dim_x) + Ac*self.dt +Ac@Ac*self.dt*self.dt
+      Bd = self.dt * Bc
+
+      return Ad, Bd
+

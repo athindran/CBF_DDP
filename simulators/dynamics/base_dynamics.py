@@ -60,7 +60,7 @@ class BaseDynamics(ABC):
         DeviceArray: next state.
     """
     raise NotImplementedError
-
+  
   @partial(jax.jit, static_argnames='self')
   def get_jacobian(
       self, nominal_states: DeviceArray, nominal_controls: DeviceArray
@@ -68,7 +68,6 @@ class BaseDynamics(ABC):
     """
     Returns the linearized 'A' and 'B' matrix of the ego vehicle around
     nominal states and controls.
-
     Args:
         nominal_states (DeviceArray): states along the nominal trajectory.
         nominal_controls (DeviceArray): controls along the trajectory.

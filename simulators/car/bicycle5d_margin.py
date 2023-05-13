@@ -238,7 +238,6 @@ class Bicycle5DConstraintMargin( BaseMargin ):
     @jax.jit
     def roll_forward(args):
       current_state, stopping_ctrl, target_cost, v_min = args
-      current_state, _ = self.plan_dyn.integrate_forward_jax(current_state, stopping_ctrl)
       
       if self.use_road:
         target_cost = jnp.minimum(target_cost,  self.road_position_min_cost.get_stage_margin(
@@ -262,8 +261,9 @@ class Bicycle5DConstraintMargin( BaseMargin ):
             _obs_constraint: BaseMargin
             target_cost = jnp.minimum(target_cost,  _obs_constraint.get_stage_margin(
                 current_state, stopping_ctrl
-            ))      
-            
+            ))  
+
+      current_state, _ = self.plan_dyn.integrate_forward_jax(current_state, stopping_ctrl)
       return current_state, stopping_ctrl, target_cost, v_min
     
     @jax.jit
@@ -277,7 +277,9 @@ class Bicycle5DConstraintMargin( BaseMargin ):
     
     current_state = jnp.array( state )
 
-    current_state, stopping_ctrl, target_cost, _ = jax.lax.while_loop( check_stopped, roll_forward, (current_state, stopping_ctrl, target_cost, self.plan_dyn.v_min))
+    current_state, stopping_ctrl, target_cost, v_min = jax.lax.while_loop( check_stopped, roll_forward, (current_state, stopping_ctrl, target_cost, self.plan_dyn.v_min))
+
+    _, _, target_cost, _ = roll_forward((current_state, stopping_ctrl, target_cost, v_min))
 
     return target_cost
 
@@ -308,7 +310,6 @@ class Bicycle5DConstraintMargin( BaseMargin ):
     @jax.jit
     def roll_forward(args):
       current_state, stopping_ctrl, target_cost, v_min, c_x_target, c_xx_target, iters, pinch_point, f_x_all = args
-      current_state, _ = self.plan_dyn.integrate_forward_jax(current_state, stopping_ctrl)
       
       f_x_curr, f_u_curr = self.plan_dyn.get_jacobian(current_state[:, jnp.newaxis], stopping_ctrl[:, jnp.newaxis])
       f_x_all = f_x_all.at[:, :, iters].set(f_x_curr[:, :, -1])
@@ -325,13 +326,13 @@ class Bicycle5DConstraintMargin( BaseMargin ):
         new_cost = self.road_position_min_cost.get_stage_margin( current_state, stopping_ctrl )
         c_x_new = self.road_position_min_cost.get_cx(current_state[:, jnp.newaxis], stopping_ctrl[:, jnp.newaxis])
         # Half space cost has no second derivative
-        c_xx_new = jnp.zeros((self.plan_dyn.dim_x, self.plan_dyn.dim_x, 1))
+        c_xx_new = self.road_position_min_cost.get_cxx(current_state[:, jnp.newaxis], stopping_ctrl[:, jnp.newaxis])
         target_cost, c_x_target, c_xx_target, pinch_point = jax.lax.cond(new_cost<target_cost, true_fn, false_fn, (new_cost, target_cost, c_x_target, c_xx_target, c_x_new, c_xx_new, iters, pinch_point)) 
         
         new_cost = self.road_position_max_cost.get_stage_margin( current_state, stopping_ctrl )
         c_x_new = self.road_position_max_cost.get_cx(current_state[:, jnp.newaxis], stopping_ctrl[:, jnp.newaxis])
         # Half space cost has no second derivative
-        c_xx_new = jnp.zeros((self.plan_dyn.dim_x, self.plan_dyn.dim_x, 1))
+        c_xx_new = self.road_position_max_cost.get_cxx(current_state[:, jnp.newaxis], stopping_ctrl[:, jnp.newaxis])
         target_cost, c_x_target, c_xx_target, pinch_point = jax.lax.cond(new_cost<target_cost, true_fn, false_fn, (new_cost, target_cost, c_x_target, c_xx_target, c_x_new, c_xx_new, iters, pinch_point)) 
 
         
@@ -339,15 +340,16 @@ class Bicycle5DConstraintMargin( BaseMargin ):
         new_cost = self.yaw_min_cost.get_stage_margin( current_state, stopping_ctrl )
         c_x_new = self.yaw_min_cost.get_cx(current_state[:, jnp.newaxis], stopping_ctrl[:, jnp.newaxis])
         # Half space cost has no second derivative
-        c_xx_new = jnp.zeros((self.plan_dyn.dim_x, self.plan_dyn.dim_x, 1))
+        c_xx_new = self.yaw_min_cost.get_cxx(current_state[:, jnp.newaxis], stopping_ctrl[:, jnp.newaxis])
         target_cost, c_x_target, c_xx_target, pinch_point = jax.lax.cond(new_cost<target_cost, true_fn, false_fn, (new_cost, target_cost, c_x_target, c_xx_target, c_x_new, c_xx_new, iters, pinch_point)) 
         
         new_cost = self.yaw_max_cost.get_stage_margin( current_state, stopping_ctrl )
         c_x_new = self.yaw_max_cost.get_cx(current_state[:, jnp.newaxis], stopping_ctrl[:, jnp.newaxis])
         # Half space cost has no second derivative
-        c_xx_new = jnp.zeros((self.plan_dyn.dim_x, self.plan_dyn.dim_x, 1))
+        c_xx_new = self.yaw_max_cost.get_cxx(current_state[:, jnp.newaxis], stopping_ctrl[:, jnp.newaxis])
         target_cost, c_x_target, c_xx_target, pinch_point = jax.lax.cond(new_cost<target_cost, true_fn, false_fn, (new_cost, target_cost, c_x_target, c_xx_target, c_x_new, c_xx_new, iters, pinch_point)) 
 
+      current_state, _ = self.plan_dyn.integrate_forward_jax(current_state, stopping_ctrl)
       iters = iters + 1
       
       return current_state, stopping_ctrl, target_cost, v_min, c_x_target, c_xx_target, iters, pinch_point, f_x_all
@@ -371,8 +373,9 @@ class Bicycle5DConstraintMargin( BaseMargin ):
     c_xx_target = jnp.zeros((self.plan_dyn.dim_x, self.plan_dyn.dim_x))
 
     f_x_all = jnp.zeros((self.plan_dyn.dim_x, self.plan_dyn.dim_x, 50))
-    current_state, stopping_ctrl, target_cost, _, c_x_target, c_xx_target, iters, pinch_point, f_x_all = jax.lax.while_loop( check_stopped, roll_forward, (current_state, stopping_ctrl, target_cost, self.plan_dyn.v_min, c_x_target, c_xx_target, 0, 0, f_x_all))
-
+    current_state, stopping_ctrl, target_cost, v_min, c_x_target, c_xx_target, iters, pinch_point, f_x_all = jax.lax.while_loop( check_stopped, roll_forward, (current_state, stopping_ctrl, target_cost, self.plan_dyn.v_min, c_x_target, c_xx_target, 0, 0, f_x_all))
+    _, _, target_cost, _, c_x_target, c_xx_target, iters, pinch_point, f_x_all = roll_forward((current_state, stopping_ctrl, target_cost, v_min, c_x_target, c_xx_target, iters, pinch_point, f_x_all))
+    
     jacobian = jax.lax.fori_loop(0, pinch_point, backprop_jacobian, jnp.eye(self.plan_dyn.dim_x))
 
     # Backpropagate derivatives from pinch point
