@@ -15,7 +15,7 @@ from .bicycle5d_margin import BicycleReachAvoid5DMargin
 from ..base_single_env import BaseSingleEnv
 
 
-class RaceCarSingle5DEnv(BaseSingleEnv):
+class CarSingle5DEnv(BaseSingleEnv):
   # region: init
   def __init__(self, config_env, config_agent, config_constraint) -> None:
     super().__init__(config_env, config_agent)
