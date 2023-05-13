@@ -34,8 +34,8 @@ class iLQRSafetyFilter(iLQR):
     self.filter_type = config.FILTER_TYPE
     self.constraint_type = config.CBF_TYPE
     self.gamma = config.BARRIER_GAMMA
+    self.lr_threshold = config.SHIELD_THRESHOLD
 
-    self.shield_threshold = 0.0
     self.shield_steps = 0
     self.barrier_shield_steps = 0
 
@@ -76,7 +76,7 @@ class iLQRSafetyFilter(iLQR):
 
     # Find safe policy from step 0 
     if prev_sol is not None:
-      controls_initialize = prev_sol['reinit_controls']
+      controls_initialize = jnp.array( prev_sol['reinit_controls'] )
     else:
       controls_initialize = None
     control_0, solver_info_0 = self.solver_0.get_action(obs, controls_initialize, **kwargs)
@@ -87,35 +87,38 @@ class iLQRSafetyFilter(iLQR):
     state_imaginary, task_policy = self.dyn.integrate_forward(
             state=initial_state, control=task_policy
     )
-    kwargs['state'] = state_imaginary
-    boot_controls = solver_info_0['controls']
+    kwargs['state'] = jnp.array( state_imaginary )
+    boot_controls = jnp.array( solver_info_0['controls'] )
 
     control_1, solver_info_1 = self.solver_1.get_action(state_imaginary, boot_controls, **kwargs)
-
-    solver_info_0['Vopt_next'] = solver_info_1['Vopt']
-    solver_info_0['marginopt_next'] = solver_info_1['marginopt']
+    boot_controls = jnp.array( solver_info_1['controls'] )
+    
+    solver_info_0['Vopt_next'] = copy.deepcopy( solver_info_1['Vopt'] )
+    solver_info_0['marginopt_next'] = copy.deepcopy( solver_info_1['marginopt'] )
 
     if(self.filter_type=="LR"):
       solver_info_0['barrier_shield_steps'] = self.barrier_shield_steps
-      if(solver_info_1['Vopt']<self.shield_threshold):
+      if(solver_info_1['Vopt']<=self.lr_threshold):
         self.shield_steps += 1
         solver_info_0['process_time'] = time.time() - start_time
         solver_info_0['shield_steps'] = self.shield_steps
         solver_info_0['resolve'] = True
-        solver_info_0['reinit_controls'] = solver_info_0['controls']
+        solver_info_0['reinit_controls'] = jnp.array( solver_info_0['controls'] )
         solver_info_0['mark_complete_shield'] = True
         solver_info_0['num_iters'] = 0
         solver_info_0['deviation'] = np.linalg.norm(control_0 - task_policy)
+        print("Final control", control_0)
         return control_0, solver_info_0
       else:
         solver_info_0['shield_steps'] = self.shield_steps
         solver_info_0['process_time'] = time.time() - start_time
         solver_info_0['resolve'] = True
-        solver_info_0['reinit_controls'] = solver_info_1['controls']
+        solver_info_0['reinit_controls'] = jnp.array( solver_info_1['controls'] )
         #solver_info_0['reinit_J'] = solver_info_1['Vopt'] 
-        solver_info_0['reinit_states'] = solver_info_1['states']
+        solver_info_0['reinit_states'] = jnp.array( solver_info_1['states'] )
         solver_info_0['num_iters'] = 0
         solver_info_0['deviation'] = 0
+        print("Final control", task_policy)
         return task_policy, solver_info_0  
     elif(self.filter_type=="CBF"):
       gamma = self.gamma
@@ -178,7 +181,7 @@ class iLQRSafetyFilter(iLQR):
             state=initial_state, control=initial_control
         )
         kwargs['state'] = np.array(state_imaginary)  
-        _, solver_info_1 = self.solver_2.get_action(state_imaginary, controls=solver_info_1['controls'], **kwargs)
+        _, solver_info_1 = self.solver_2.get_action(state_imaginary, controls=jnp.array( solver_info_1['controls'] ), **kwargs)
         solver_info_0['Vopt_next'] = solver_info_1['Vopt']
         solver_info_0['marginopt_next'] = solver_info_1['marginopt']
 
@@ -196,8 +199,9 @@ class iLQRSafetyFilter(iLQR):
         solver_info_0['shield_steps'] = self.shield_steps
         solver_info_0['process_time'] = time.time() - start_time
         solver_info_0['resolve'] = True
-        solver_info_0['reinit_controls'] = solver_info_1['controls']
-        solver_info_0['reinit_states'] = solver_info_1['states']
+        solver_info_0['reinit_controls'] = jnp.array( solver_info_1['controls'] )
+        #solver_info_0['reinit_controls'] = solver_info_0['reinit_controls'].at[:, 0:-1].set(solver_info_1['controls'])
+        solver_info_0['reinit_states'] = jnp.array( solver_info_1['states'] )
         #solver_info_0['reinit_J'] = solver_info_1['Vopt'] 
         solver_info_0['num_iters'] = num_iters
         solver_info_0['deviation'] = np.linalg.norm(initial_control - task_policy)

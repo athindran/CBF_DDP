@@ -22,11 +22,11 @@ class iLQRReachAvoid(iLQR):
   ) -> np.ndarray:
     status = 0
 
-    # `controls` include control input at timestep N-1, which is a dummy
-    # control of zeros.
     if controls is None:
       controls = np.zeros((self.dim_u, self.N))
+      # Some non-zero initialization
       controls[0, :] = self.dyn.ctrl_space[0, 0]
+      controls[1, :] = self.dyn.ctrl_space[1, 1]
       controls = jnp.array(controls)
     else:
       assert controls.shape[1] == self.N
@@ -42,6 +42,7 @@ class iLQRReachAvoid(iLQR):
     )
 
     # Target cost derivatives are manually computed for more well-behaved backpropagation
+    #target_margins = self.cost.get_mapped_target_margin(states, controls)
     target_margins, c_x_t, c_xx_t, c_u_t, c_uu_t = self.cost.get_mapped_target_margin_with_derivative(states, controls)
 
     ctrl_costs = self.cost.ctrl_cost.get_mapped_margin(states, controls)
@@ -52,7 +53,7 @@ class iLQRReachAvoid(iLQR):
     converged = False
     time0 = time.time()
 
-    self.tol = 1e-6
+    self.tol = 1e-5
 
     for i in range(self.max_iter):
       # We need cost derivatives from 0 to N-1, but we only need dynamics
@@ -73,13 +74,17 @@ class iLQRReachAvoid(iLQR):
       # Choose the best alpha scaling using appropriate line search methods
       alpha_chosen = self.baseline_line_search( states, controls, K_closed_loop, k_open_loop, J)
       #alpha_chosen = self.armijo_line_search( states, controls, K_closed_loop, k_open_loop, critical, J, c_u)
-            
+
+      #states, controls, J_new, critical, failure_margins, target_margins, reachavoid_margin, _, _, _, _ = self.forward_pass(states, controls, K_closed_loop, k_open_loop, alpha_chosen)        
       states, controls, J_new, critical, failure_margins, target_margins, reachavoid_margin, c_x_t, c_xx_t, c_u_t, c_uu_t = self.forward_pass(states, controls, K_closed_loop, k_open_loop, alpha_chosen) 
       if np.abs((J-J_new) / J) < self.tol:  # Small improvement.
         converged = True
+      #if J_new>0 and np.abs((J-J_new) / J) < self.tol:
+      #  converged = True
+
       J = J_new
       
-      if alpha_chosen<1e-17:
+      if alpha_chosen<self.min_alpha:
           break
       # Terminates early if the objective improvement is negligible.
       if converged:
@@ -114,7 +119,7 @@ class iLQRReachAvoid(iLQR):
     @jax.jit
     def check_terminated(args):
       _, _, _, _, alpha, J, J_new = args
-      return jnp.logical_and( alpha>1e-17, J_new<J )
+      return jnp.logical_and( alpha>self.min_alpha, J_new<J )
     
     states, controls, K_closed_loop, k_open_loop, alpha, J, J_new = jax.lax.while_loop(check_terminated, run_forward_pass, (states, controls, K_closed_loop, k_open_loop, alpha, J, J_new))
 
@@ -146,7 +151,7 @@ class iLQRReachAvoid(iLQR):
     def check_terminated(args):
       states, controls, K_closed_loop, k_open_loop, alpha, J, t_star, J_new, deltat = args
       armijo_check = (J_new <=J + 0.5*deltat*alpha )
-      return jnp.logical_and( alpha>1e-17, armijo_check )
+      return jnp.logical_and( alpha>self.min_alpha, armijo_check )
     
     states, controls, K_closed_loop, k_open_loop, alpha, J, t_star, J_new, deltat = jax.lax.while_loop(check_terminated, run_forward_pass, (states, controls, K_closed_loop, k_open_loop, alpha, J, t_star, J_new, deltat))
 
