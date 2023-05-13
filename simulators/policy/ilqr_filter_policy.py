@@ -133,7 +133,7 @@ class iLQRSafetyFilter(iLQR):
       num_iters = 0
 
       # Setting tolerance to zero does not cause big improvements at the cost of more unnecessary looping
-      cbf_tol = -1e6
+      cbf_tol = -1e-5
       # Conditioning parameter
       eps_reg = 1e-8
 
