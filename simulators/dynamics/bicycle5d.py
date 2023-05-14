@@ -103,10 +103,6 @@ class Bicycle5D(BaseDynamics):
          jnp.clip(state_nxt[4], self.delta_min, self.delta_max)
     )
 
-    #state_nxt = state_nxt.at[3].set(
-    #    jnp.mod(state_nxt[3] + jnp.pi, 2 * jnp.pi) - jnp.pi
-    #)
-
     return state_nxt
   
   @partial(jax.jit, static_argnames='self')
