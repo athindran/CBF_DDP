@@ -1,6 +1,6 @@
 """
 Please contact the author(s) of this library if you have any questions.
-Authors:  Kai-Chieh Hsu ( kaichieh@princeton.edu )
+Authors:  Athindran Ramesh Kumar, Kai-Chieh Hsu ( arkumar@princeton.edu )
 """
 from typing import Tuple, Optional, Dict
 import time
