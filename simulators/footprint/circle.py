@@ -19,5 +19,5 @@ class CircleFootprint:
     self.center = center
 
   def plot(self, ax, color='r', lw=1.5, alpha=1.):
-    ego_circle = plt.Circle([self.center[0], self.center[1]], self.ego_radius, alpha=0.4, color='c')
+    ego_circle = plt.Circle([self.center[0], self.center[1]], self.ego_radius, alpha=0.4, color=color)
     ax.add_patch(ego_circle)

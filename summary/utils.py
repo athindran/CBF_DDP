@@ -18,15 +18,8 @@ def find_jerk(controls):
     return [mean_x_jerk, mean_y_jerk, std_x_jerk, std_y_jerk]
 
 def plot_run_summary(dyn_id, env, state_history, action_history, config_solver, fig_folder="./", **kwargs):
-    c_obs = 'r'
-    c_ego = 'g'
-
-    if config_solver.FILTER_TYPE == "none":
-        c_trace = 'k'
-    elif config_solver.FILTER_TYPE == "LR":
-        c_trace = 'r'
-    elif config_solver.FILTER_TYPE == "CBF":
-        c_trace = 'b'
+    c_obs = 'k'
+    c_ego = 'c'
     
     fig, axes = plt.subplots(
         2, 1, figsize=(config_solver.FIG_SIZE_X, 2*config_solver.FIG_SIZE_Y)
@@ -35,7 +28,7 @@ def plot_run_summary(dyn_id, env, state_history, action_history, config_solver, 
     for ax in axes:
       # track, obstacles, footprint
       env.render_obs(ax=ax, c=c_obs)
-      env.render_footprint(ax=ax, state=state_history[-1], c=c_ego)
+      env.render_footprint(ax=ax, state=state_history[-3], c=c_ego)
       ax.axis(env.visual_extent)
       ax.set_aspect('equal')
 
@@ -125,29 +118,38 @@ def make_animation_plots(env, state_history, solver_info, config_solver, fig_pro
     ax.axis(env.visual_extent)
     ax.set_aspect('equal')
 
-    c_obs = 'r'
-    c_ego = 'g'
+    c_obs = 'k'
+    c_ego = 'c'
 
     if config_solver.FILTER_TYPE == "none":
         c_trace = 'k'
     elif config_solver.FILTER_TYPE == "LR":
         c_trace = 'r'
+        ax.set_title('LR-DDP')
     elif config_solver.FILTER_TYPE == "CBF":
         c_trace = 'b'
+        ax.set_title('CBF-DDP')
 
     # track, obstacles, footprint
     env.render_obs(ax=ax, c=c_obs)
-    env.render_footprint(ax=ax, state=state_history[-1], c=c_ego, lw=1.5)
+
+    if solver_info['mark_complete_filter']:
+        env.render_footprint(ax=ax, state=state_history[-1], c='r', lw=0.5)
+    elif solver_info['mark_barrier_filter']:
+        env.render_footprint(ax=ax, state=state_history[-1], c='b', lw=0.5)
+    else:    
+        env.render_footprint(ax=ax, state=state_history[-1], c=c_ego, lw=0.5)
 
     # plan.
     ax.plot(
-        solver_info['states'][0, :], solver_info['states'][1, :], linewidth=1.,
-        c=c_ego
+        solver_info['states'][0, :], solver_info['states'][1, :], linewidth=0.5,
+        c='g', label='Safety plan'
     )
     # historyory.
     sc = ax.scatter(
         states[0, :-1], states[1, :-1], s=24, c=c_trace, marker='o'
     )
+    ax.legend(fontsize=6, loc='upper left', bbox_to_anchor=(-0.05, 1.2), fancybox=True)    
     fig.savefig(
         os.path.join(fig_prog_folder,
                      str(states.shape[1] - 1) + ".png"), dpi=200

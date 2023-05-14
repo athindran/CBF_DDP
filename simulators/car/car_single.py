@@ -366,7 +366,7 @@ class CarSingle5DEnv(BaseSingleEnv):
             ax.plot(vertices[i:i + 2, 0], vertices[i:i + 2, 1], c=c)
     elif self.cost.constraint.obsc_type=='circle':
       for vertices in self.obs_vertices_list:
-        obs_circle = plt.Circle([vertices[0], vertices[1]], vertices[2], alpha=0.4, color='k')
+        obs_circle = plt.Circle([vertices[0], vertices[1]], vertices[2], alpha=0.4, color=c)
         ax.add_patch(obs_circle)
 
 
