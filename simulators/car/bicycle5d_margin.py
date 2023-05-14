@@ -156,6 +156,9 @@ class Bicycle5DConstraintMargin( BaseMargin ):
     self.obsc_type = config.OBSC_TYPE
     self.plan_dyn = plan_dyn
 
+    self.dim_x = plan_dyn.dim_x
+    self.dim_u = plan_dyn.dim_u
+
     self.obs_constraint = []
     if self.obsc_type=='circle':
       for circle_spec in self.obs_spec:
@@ -326,13 +329,15 @@ class Bicycle5DConstraintMargin( BaseMargin ):
         new_cost = self.road_position_min_cost.get_stage_margin( current_state, stopping_ctrl )
         c_x_new = self.road_position_min_cost.get_cx(current_state[:, jnp.newaxis], stopping_ctrl[:, jnp.newaxis])
         # Half space cost has no second derivative
-        c_xx_new = self.road_position_min_cost.get_cxx(current_state[:, jnp.newaxis], stopping_ctrl[:, jnp.newaxis])
+        #c_xx_new = self.road_position_min_cost.get_cxx(current_state[:, jnp.newaxis], stopping_ctrl[:, jnp.newaxis])
+        c_xx_new = jnp.zeros((self.dim_x, self.dim_x, 1))
         target_cost, c_x_target, c_xx_target, pinch_point = jax.lax.cond(new_cost<target_cost, true_fn, false_fn, (new_cost, target_cost, c_x_target, c_xx_target, c_x_new, c_xx_new, iters, pinch_point)) 
         
         new_cost = self.road_position_max_cost.get_stage_margin( current_state, stopping_ctrl )
         c_x_new = self.road_position_max_cost.get_cx(current_state[:, jnp.newaxis], stopping_ctrl[:, jnp.newaxis])
         # Half space cost has no second derivative
-        c_xx_new = self.road_position_max_cost.get_cxx(current_state[:, jnp.newaxis], stopping_ctrl[:, jnp.newaxis])
+        c_xx_new = jnp.zeros((self.dim_x, self.dim_x, 1))
+        #c_xx_new = self.road_position_max_cost.get_cxx(current_state[:, jnp.newaxis], stopping_ctrl[:, jnp.newaxis])
         target_cost, c_x_target, c_xx_target, pinch_point = jax.lax.cond(new_cost<target_cost, true_fn, false_fn, (new_cost, target_cost, c_x_target, c_xx_target, c_x_new, c_xx_new, iters, pinch_point)) 
 
         
@@ -346,7 +351,8 @@ class Bicycle5DConstraintMargin( BaseMargin ):
         new_cost = self.yaw_max_cost.get_stage_margin( current_state, stopping_ctrl )
         c_x_new = self.yaw_max_cost.get_cx(current_state[:, jnp.newaxis], stopping_ctrl[:, jnp.newaxis])
         # Half space cost has no second derivative
-        c_xx_new = self.yaw_max_cost.get_cxx(current_state[:, jnp.newaxis], stopping_ctrl[:, jnp.newaxis])
+        #c_xx_new = self.yaw_max_cost.get_cxx(current_state[:, jnp.newaxis], stopping_ctrl[:, jnp.newaxis])
+        c_xx_new = jnp.zeros((self.dim_x, self.dim_x, 1))
         target_cost, c_x_target, c_xx_target, pinch_point = jax.lax.cond(new_cost<target_cost, true_fn, false_fn, (new_cost, target_cost, c_x_target, c_xx_target, c_x_new, c_xx_new, iters, pinch_point)) 
 
       current_state, _ = self.plan_dyn.integrate_forward_jax(current_state, stopping_ctrl)

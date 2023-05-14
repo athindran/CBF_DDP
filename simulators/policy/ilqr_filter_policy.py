@@ -13,7 +13,7 @@ import copy
 import numpy as np
 
 from .base_policy import BasePolicy
-from .ilqr_reachability_policy import iLQRReachability
+#from .ilqr_reachability_policy import iLQRReachability
 from .ilqr_reachavoid_policy import iLQRReachAvoid
 from .ilqr_policy import iLQR
 
@@ -22,7 +22,7 @@ from ..costs.base_margin import BaseMargin
 
 from functools import partial
 
-from .solver_utils import barrier_filter_linear, barrier_filter_quadratic
+from .solver_utils import barrier_filter_linear, barrier_filter_quadratic, bicycle_linear_task_policy
 
 class iLQRSafetyFilter(iLQR):
 
@@ -30,14 +30,13 @@ class iLQRSafetyFilter(iLQR):
     super().__init__(id, config, dyn, cost)
     self.config = config
 
-    self.policy_type = "iLQR"
     self.filter_type = config.FILTER_TYPE
     self.constraint_type = config.CBF_TYPE
     self.gamma = config.BARRIER_GAMMA
-    self.lr_threshold = config.SHIELD_THRESHOLD
+    self.lr_threshold = config.LR_THRESHOLD
 
-    self.shield_steps = 0
-    self.barrier_shield_steps = 0
+    self.filter_steps = 0
+    self.barrier_filter_steps = 0
 
     self.dyn = copy.deepcopy( dyn )
     self.cost = copy.deepcopy( cost )
@@ -47,18 +46,14 @@ class iLQRSafetyFilter(iLQR):
     self.rollout_dyn_1 = copy.deepcopy( dyn )
     self.rollout_dyn_2 = copy.deepcopy( dyn )
 
-    self.eps = getattr(config, "EPS", 1e-6)
     self.dim_x = dyn.dim_x
     self.dim_u = dyn.dim_u
     self.N = config.N
 
-    self.task_ilqr = iLQR(self.id, self.config, self.rollout_dyn_2, self.task_cost)
+    if self.config.is_task_ilqr:
+      self.task_ilqr = iLQR(self.id, self.config, self.rollout_dyn_2, self.task_cost)
     # Two ILQ solvers
-    if self.config.COST_TYPE=="Reachability":
-      self.solver_0 = iLQRReachability(self.id, self.config, self.rollout_dyn_0, self.cost)
-      self.solver_1 = iLQRReachability(self.id, self.config, self.rollout_dyn_1, self.cost)
-      self.solver_2 = iLQRReachability(self.id, self.config, self.rollout_dyn_1, self.cost)
-    elif self.config.COST_TYPE=="Reachavoid":
+    if self.config.COST_TYPE=="Reachavoid":
       self.solver_0 = iLQRReachAvoid(self.id, self.config, self.rollout_dyn_0, self.cost)
       self.solver_1 = iLQRReachAvoid(self.id, self.config, self.rollout_dyn_1, self.cost)
       self.solver_2 = iLQRReachAvoid(self.id, self.config, self.rollout_dyn_1, self.cost)
@@ -71,8 +66,11 @@ class iLQRSafetyFilter(iLQR):
     # Cruise policy
     start_time = time.time()
     initial_state = np.array(kwargs['state'])
-    task_policy, _ = self.task_ilqr.get_action(obs, None, **kwargs)
-    #task_policy = bicycle_linear_task_policy( initial_state )
+
+    if self.config.is_task_ilqr:
+      task_policy, _ = self.task_ilqr.get_action(obs, None, **kwargs)
+    else:
+      task_policy = bicycle_linear_task_policy( initial_state )
 
     # Find safe policy from step 0 
     if prev_sol is not None:
@@ -81,8 +79,8 @@ class iLQRSafetyFilter(iLQR):
       controls_initialize = None
     control_0, solver_info_0 = self.solver_0.get_action(obs, controls_initialize, **kwargs)
     
-    solver_info_0['mark_barrier_shield'] = False
-    solver_info_0['mark_complete_shield'] = False
+    solver_info_0['mark_barrier_filter'] = False
+    solver_info_0['mark_complete_filter'] = False
     # Find safe policy from step 1
     state_imaginary, task_policy = self.dyn.integrate_forward(
             state=initial_state, control=task_policy
@@ -97,20 +95,20 @@ class iLQRSafetyFilter(iLQR):
     solver_info_0['marginopt_next'] = copy.deepcopy( solver_info_1['marginopt'] )
 
     if(self.filter_type=="LR"):
-      solver_info_0['barrier_shield_steps'] = self.barrier_shield_steps
+      solver_info_0['barrier_filter_steps'] = self.barrier_filter_steps
       if(solver_info_1['Vopt']<=self.lr_threshold):
-        self.shield_steps += 1
+        self.filter_steps += 1
         solver_info_0['process_time'] = time.time() - start_time
-        solver_info_0['shield_steps'] = self.shield_steps
+        solver_info_0['filter_steps'] = self.filter_steps
         solver_info_0['resolve'] = True
         solver_info_0['reinit_controls'] = jnp.array( solver_info_0['controls'] )
-        solver_info_0['mark_complete_shield'] = True
+        solver_info_0['mark_complete_filter'] = True
         solver_info_0['num_iters'] = 0
         solver_info_0['deviation'] = np.linalg.norm(control_0 - task_policy)
-        print("Final control", control_0)
+        print("Filtered control", control_0)
         return control_0, solver_info_0
       else:
-        solver_info_0['shield_steps'] = self.shield_steps
+        solver_info_0['filter_steps'] = self.filter_steps
         solver_info_0['process_time'] = time.time() - start_time
         solver_info_0['resolve'] = True
         solver_info_0['reinit_controls'] = jnp.array( solver_info_1['controls'] )
@@ -118,7 +116,7 @@ class iLQRSafetyFilter(iLQR):
         solver_info_0['reinit_states'] = jnp.array( solver_info_1['states'] )
         solver_info_0['num_iters'] = 0
         solver_info_0['deviation'] = 0
-        print("Final control", task_policy)
+        print("Filtered control", task_policy)
         return task_policy, solver_info_0  
     elif(self.filter_type=="CBF"):
       gamma = self.gamma
@@ -137,7 +135,7 @@ class iLQRSafetyFilter(iLQR):
 
       # Setting tolerance to zero does not cause big improvements at the cost of more unnecessary looping
       cbf_tol = -1e-5
-      # Conditioning parameter
+      # Conditioning parameter out of abundance of caution
       eps_reg = 1e-8
 
       # Checking CBF constraint violation
@@ -193,10 +191,10 @@ class iLQRSafetyFilter(iLQR):
 
       if solver_info_1['Vopt']>0:
         if num_iters>0:
-          self.barrier_shield_steps += 1
-          solver_info_0['mark_barrier_shield'] = True
-        solver_info_0['barrier_shield_steps'] = self.barrier_shield_steps
-        solver_info_0['shield_steps'] = self.shield_steps
+          self.barrier_filter_steps += 1
+          solver_info_0['mark_barrier_filter'] = True
+        solver_info_0['barrier_filter_steps'] = self.barrier_filter_steps
+        solver_info_0['filter_steps'] = self.filter_steps
         solver_info_0['process_time'] = time.time() - start_time
         solver_info_0['resolve'] = True
         solver_info_0['reinit_controls'] = jnp.array( solver_info_1['controls'] )
@@ -208,15 +206,15 @@ class iLQRSafetyFilter(iLQR):
         solver_info_0['qcqp_initialize'] = initial_control - task_policy
         return initial_control.ravel(), solver_info_0
     
-    self.shield_steps += 1
+    self.filter_steps += 1
     # Safe policy
-    solver_info_0['barrier_shield_steps'] = self.barrier_shield_steps
-    solver_info_0['shield_steps'] = self.shield_steps 
+    solver_info_0['barrier_filter_steps'] = self.barrier_filter_steps
+    solver_info_0['filter_steps'] = self.filter_steps 
     solver_info_0['process_time'] = time.time() - start_time
     solver_info_0['resolve'] = True
     solver_info_0['num_iters'] = num_iters
     solver_info_0['reinit_controls'] = solver_info_0['controls']
-    solver_info_0['mark_complete_shield'] = True
+    solver_info_0['mark_complete_filter'] = True
     solver_info_0['deviation'] = np.linalg.norm(control_0 - task_policy)
     solver_info_0['qcqp_initialize'] = control_0 - task_policy
 

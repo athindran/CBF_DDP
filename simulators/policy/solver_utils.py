@@ -58,7 +58,7 @@ def bicycle_linear_task_policy( run_env_obs ):
 
     if run_env_obs.size==5:
       control_task = np.zeros((2, ))
-      control_task[0] = -1.0*(run_env_obs[2] - 1.0) 
+      control_task[0] = -1.0*(run_env_obs[2] - 0.9) 
       # Use only unwrapped yaw phase for this subtraction
       alpha = (run_env_obs[3] - direction_waypoint)
 

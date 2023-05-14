@@ -21,12 +21,12 @@ class iLQRReachAvoid(iLQR):
       agents_action: Optional[Dict] = None,**kwargs
   ) -> np.ndarray:
     status = 0
+    self.tol = 1e-6
 
     if controls is None:
       controls = np.zeros((self.dim_u, self.N))
       # Some non-zero initialization
       controls[0, :] = self.dyn.ctrl_space[0, 0]
-      controls[1, :] = self.dyn.ctrl_space[1, 1]
       controls = jnp.array(controls)
     else:
       assert controls.shape[1] == self.N
@@ -53,8 +53,6 @@ class iLQRReachAvoid(iLQR):
     converged = False
     time0 = time.time()
 
-    self.tol = 1e-5
-
     for i in range(self.max_iter):
       # We need cost derivatives from 0 to N-1, but we only need dynamics
       c_x, c_u, c_xx, c_uu, c_ux = self.cost.get_derivatives(
@@ -77,27 +75,26 @@ class iLQRReachAvoid(iLQR):
 
       #states, controls, J_new, critical, failure_margins, target_margins, reachavoid_margin, _, _, _, _ = self.forward_pass(states, controls, K_closed_loop, k_open_loop, alpha_chosen)        
       states, controls, J_new, critical, failure_margins, target_margins, reachavoid_margin, c_x_t, c_xx_t, c_u_t, c_uu_t = self.forward_pass(states, controls, K_closed_loop, k_open_loop, alpha_chosen) 
-      if np.abs((J-J_new) / J) < self.tol:  # Small improvement.
+      if (np.abs((J-J_new) / J) < self.tol) and J_new>0:  # Small improvement.
         converged = True
-      #if J_new>0 and np.abs((J-J_new) / J) < self.tol:
-      #  converged = True
 
       J = J_new
       
       if alpha_chosen<self.min_alpha:
+          status = 2
           break
       # Terminates early if the objective improvement is negligible.
       if converged:
         status = 1
         break
-    
+
     t_process = time.time() - time0
     states = np.asarray(states)
     controls = np.asarray(controls)
     K_closed_loop = np.asarray(K_closed_loop)
     k_open_loop = np.asarray(k_open_loop)
     solver_info = dict(
-        states=states, controls=controls, reinit_controls=controls, t_process=t_process, status=status, Vopt=J, marginopt=J,
+        states=states, controls=controls, reinit_controls=controls, t_process=t_process, status=status, Vopt=J, marginopt=reachavoid_margin,
         grad_x=V_x, grad_xx=V_xx, B0=fu[:, :, 0]
     )
 

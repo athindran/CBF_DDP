@@ -30,10 +30,10 @@ class iLQR(BasePolicy):
     self.dim_u = dyn.dim_u
     self.N = config.N
     self.max_iter = config.MAX_ITER
-    self.tol = 1e-5  # ILQR update tolerance.
-    self.eps = getattr(config, "EPS", 1e-3) 
+    self.tol = 1e-6  # ILQR update tolerance.
+    self.eps = getattr(config, "EPS", 1e-6) 
     # Stepsize scheduler.
-    self.min_alpha = 1e-15
+    self.min_alpha = 1e-12
     self.alphas = 0.5**(np.arange(30))
 
   def get_action(

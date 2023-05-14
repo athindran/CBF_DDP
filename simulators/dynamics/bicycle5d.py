@@ -87,9 +87,8 @@ class Bicycle5D(BaseDynamics):
 
   @partial(jax.jit, static_argnames='self')
   def _integrate_forward_dt(
-      self, state: DeviceArray, control: DeviceArray, dt:float
+      self, state: DeviceArray, ctrl_clip: DeviceArray, dt:float
   ) -> DeviceArray:
-    ctrl_clip = jnp.clip(control, self.ctrl_space[:, 0], self.ctrl_space[:, 1])
     k1 = self.disc_deriv(state, ctrl_clip)
     k2 = self.disc_deriv(state + k1*dt/2, ctrl_clip)
     k3 = self.disc_deriv(state + k2*dt/2, ctrl_clip)
@@ -104,9 +103,9 @@ class Bicycle5D(BaseDynamics):
          jnp.clip(state_nxt[4], self.delta_min, self.delta_max)
     )
 
-    state_nxt = state_nxt.at[3].set(
-        jnp.mod(state_nxt[3] + jnp.pi, 2 * jnp.pi) - jnp.pi
-    )
+    #state_nxt = state_nxt.at[3].set(
+    #    jnp.mod(state_nxt[3] + jnp.pi, 2 * jnp.pi) - jnp.pi
+    #)
 
     return state_nxt
   
