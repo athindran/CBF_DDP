@@ -37,9 +37,9 @@ cost:
   VT_MIN: 0.0
   VT_MAX: 2.0
   Q1_V: 0.1
-  Q2_V: 0.4
+  Q2_V: 0.3
   Q1_YAW: 0.1
-  Q2_YAW: 0.4
+  Q2_YAW: 0.3
   BARRIER_CLIP_MIN: -0.25
   BARRIER_CLIP_MAX: 5.0
   
