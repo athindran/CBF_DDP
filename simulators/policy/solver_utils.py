@@ -63,34 +63,8 @@ def bicycle_linear_task_policy( run_env_obs ):
       alpha = (run_env_obs[3] - direction_waypoint)
 
       if np.abs(alpha)<0.1:
-        control_task[1] = -1.0*run_env_obs[4] 
+        control_task[1] = -0.9*run_env_obs[4] 
       else:    
-        control_task[1] = -1.0*alpha - 0.9*run_env_obs[4] 
-    elif run_env_obs.size==6:
-      control_task = np.zeros((3, ))
-      control_task[0] = -1.0*(run_env_obs[2] - 0.9) 
-      # Use only unwrapped yaw phase for this subtraction
-      alpha = (run_env_obs[3] - direction_waypoint)
-
-      if np.abs(alpha)<0.1:
-        control_task[1] = -1.0*run_env_obs[4] 
-        control_task[2] = -1.0*run_env_obs[5] 
-      else:    
-        control_task[1] = -1.0*alpha - 0.9*run_env_obs[4] 
-        control_task[2] = -1.0*alpha - 0.9*run_env_obs[5]
-    else:
-      control_task = np.zeros((4, ))
-      control_task[0] = -1.0*(run_env_obs[2] - 0.6) 
-      control_task[1] = -1.0*(run_env_obs[3] - 0.6) 
-
-      # Use only unwrapped yaw phase for this subtraction
-      alpha = (run_env_obs[4] - direction_waypoint)
-
-      if np.abs(alpha)<0.1:
-        control_task[2] = -1.0*run_env_obs[5] 
-        control_task[3] = -1.0*run_env_obs[6] 
-      else:    
-        control_task[2] = -1.0*alpha - 0.9*run_env_obs[5] 
-        control_task[3] = 1.0*alpha - 0.9*run_env_obs[6] 
+        control_task[1] = -1.2*alpha - 0.9*run_env_obs[4]
 
     return control_task
