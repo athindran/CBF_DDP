@@ -149,7 +149,7 @@ def make_animation_plots(env, state_history, solver_info, config_solver, fig_pro
     sc = ax.scatter(
         states[0, :-1], states[1, :-1], s=24, c=c_trace, marker='o'
     )
-    ax.legend(fontsize=6, loc='upper left', bbox_to_anchor=(-0.05, 1.2), fancybox=True)    
+    ax.legend(fontsize=6, loc='upper left', bbox_to_anchor=(-0.05, 1.14), fancybox=True)    
     fig.savefig(
         os.path.join(fig_prog_folder,
                      str(states.shape[1] - 1) + ".png"), dpi=200
@@ -192,7 +192,7 @@ def make_yaw_report(prefix="./exps_may/ilqr/bic5D/yaw_testing/", plot_folder="./
                 rblist.append(rb)
 
                 if sh=='LR' and yc is None:
-                    showlist.append(True)
+                    showlist.append(False)
                 else:
                     showlist.append(True)                
             
