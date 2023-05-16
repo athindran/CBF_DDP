@@ -77,7 +77,14 @@ class iLQRSafetyFilter(iLQR):
       controls_initialize = jnp.array( prev_sol['reinit_controls'] )
     else:
       controls_initialize = None
-    control_0, solver_info_0 = self.solver_0.get_action(obs, controls_initialize, **kwargs)
+    
+    if prev_sol is None or prev_sol['resolve']:
+      control_0, solver_info_0 = self.solver_0.get_action(obs, controls_initialize, **kwargs)
+    else:
+      # Potential source of acceleration. We don't need to resolve both ILQs as we can reuse solution from previous time. - Unused currently.
+      solver_info_0 = prev_sol
+      solver_info_0['controls'] = jnp.array( solver_info_0['reinit_controls'] )
+      control_0 = solver_info_0['controls'][:, 0]
     
     solver_info_0['mark_barrier_filter'] = False
     solver_info_0['mark_complete_filter'] = False
@@ -101,11 +108,14 @@ class iLQRSafetyFilter(iLQR):
         solver_info_0['process_time'] = time.time() - start_time
         solver_info_0['filter_steps'] = self.filter_steps
         solver_info_0['resolve'] = True
-        solver_info_0['reinit_controls'] = jnp.array( solver_info_0['controls'] )
+        solver_info_0['reinit_controls'] = jnp.zeros((self.dim_u, self.N))
+        # Warm start for next cycle
+        solver_info_0['reinit_controls'] = solver_info_0['reinit_controls'].at[:, 0:self.N-1].set(solver_info_0['controls'][:, 1:self.N])
+        solver_info_0['reinit_controls'] = solver_info_0['reinit_controls'].at[:, -1].set(self.dyn.ctrl_space[0, 0])
         solver_info_0['mark_complete_filter'] = True
         solver_info_0['num_iters'] = 0
         solver_info_0['deviation'] = np.linalg.norm(control_0 - task_policy)
-        print("Filtered control", control_0)
+        #print("Filtered control safe", control_0)
         return control_0, solver_info_0
       else:
         solver_info_0['filter_steps'] = self.filter_steps
@@ -116,8 +126,8 @@ class iLQRSafetyFilter(iLQR):
         solver_info_0['reinit_states'] = jnp.array( solver_info_1['states'] )
         solver_info_0['num_iters'] = 0
         solver_info_0['deviation'] = 0
-        print("Filtered control", task_policy)
-        return task_policy, solver_info_0  
+        #print("Filtered control task", task_policy)
+        return task_policy, solver_info_0
     elif(self.filter_type=="CBF"):
       gamma = self.gamma
       cutoff = gamma*solver_info_0['Vopt']
@@ -143,10 +153,10 @@ class iLQRSafetyFilter(iLQR):
       scaled_c = constraint_violation
       
       #Scaling parameter
-      kappa = 1.2
+      kappa = 1.3
 
       # Exit loop once CBF constraint satisfied or maximum iterations violated
-      while((constraint_violation<cbf_tol or warmup) and num_iters<5):
+      while((constraint_violation<cbf_tol or warmup) and num_iters<6):
         num_iters= num_iters + 1
 
         # Extract information from solver for enforcing constraint
@@ -197,8 +207,9 @@ class iLQRSafetyFilter(iLQR):
         solver_info_0['filter_steps'] = self.filter_steps
         solver_info_0['process_time'] = time.time() - start_time
         solver_info_0['resolve'] = True
-        solver_info_0['reinit_controls'] = jnp.array( solver_info_1['controls'] )
-        #solver_info_0['reinit_controls'] = solver_info_0['reinit_controls'].at[:, 0:-1].set(solver_info_1['controls'])
+        solver_info_0['reinit_controls'] = jnp.zeros((self.dim_u, self.N))
+        solver_info_0['reinit_controls'] = solver_info_0['reinit_controls'].at[:, 0:self.N-1].set(solver_info_0['controls'][:, 1:self.N])
+        solver_info_0['reinit_controls'] = solver_info_0['reinit_controls'].at[:, -1].set(self.dyn.ctrl_space[0, 0])
         solver_info_0['reinit_states'] = jnp.array( solver_info_1['states'] )
         #solver_info_0['reinit_J'] = solver_info_1['Vopt'] 
         solver_info_0['num_iters'] = num_iters
