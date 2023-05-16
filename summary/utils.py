@@ -164,7 +164,7 @@ def make_yaw_report(prefix="./exps_may/ilqr/bic5D/yaw_testing/", plot_folder="./
     matplotlib.rc('ytick', labelsize=6) 
     legend_fontsize = 5
     road_bounds = [road_boundary]
-    yaw_consts = [None, 1.57, 1.27]
+    yaw_consts = [None, 0.5*np.pi, 0.4*np.pi]
     label_yc = [None, 0.5, 0.4]
 
     suffixlist = []
@@ -182,10 +182,11 @@ def make_yaw_report(prefix="./exps_may/ilqr/bic5D/yaw_testing/", plot_folder="./
     for sh in ['CBF', 'LR']:
         for rb in road_bounds:
             for yindx, yc in enumerate(yaw_consts):
-                suffixlist.append(os.path.join("road_boundary=" + str(rb) + ", yaw="+str(yc), sh))
                 if yc is not None:
+                    suffixlist.append(os.path.join("road_boundary=" + str(rb) + ", yaw="+str(round(yc, 2)), sh))
                     labellist.append(sh+"-DDP $\delta \\theta \leq$"+str(label_yc[yindx])+"$\pi$")
                 else:
+                    suffixlist.append(os.path.join("road_boundary=" + str(rb) + ", yaw="+str(yc), sh))
                     labellist.append(sh+"-DDP No $\delta \\theta$")
                 colorlist.append(colors[sh])
                 stylelist.append(styles[yindx])
@@ -196,7 +197,7 @@ def make_yaw_report(prefix="./exps_may/ilqr/bic5D/yaw_testing/", plot_folder="./
                 else:
                     showlist.append(True)                
             
-                if sh=='LR' and yc==1.57:
+                if sh=='LR' and yc==0.5*np.pi:
                     showcontrollist.append(True)
                 elif sh=='CBF' and yc is None:
                     showcontrollist.append(True)
