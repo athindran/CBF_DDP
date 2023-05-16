@@ -36,7 +36,7 @@ class iLQRReachAvoid(iLQR):
     states, controls = self.rollout_nominal(
         jnp.array(kwargs.get('state')), controls
     )
-
+    
     failure_margins = self.cost.constraint.get_mapped_margin(
         states, controls
     )
@@ -46,9 +46,9 @@ class iLQRReachAvoid(iLQR):
     target_margins, c_x_t, c_xx_t, c_u_t, c_uu_t = self.cost.get_mapped_target_margin_with_derivative(states, controls)
 
     ctrl_costs = self.cost.ctrl_cost.get_mapped_margin(states, controls)
-    critical, fut_margin = self.get_critical_points(failure_margins, target_margins)
+    critical, reachavoid__margin = self.get_critical_points(failure_margins, target_margins)
         
-    J = (fut_margin + jnp.sum(ctrl_costs)).astype(float)
+    J = (reachavoid__margin + jnp.sum(ctrl_costs)).astype(float)
 
     converged = False
     time0 = time.time()
@@ -75,8 +75,10 @@ class iLQRReachAvoid(iLQR):
 
       #states, controls, J_new, critical, failure_margins, target_margins, reachavoid_margin, _, _, _, _ = self.forward_pass(states, controls, K_closed_loop, k_open_loop, alpha_chosen)        
       states, controls, J_new, critical, failure_margins, target_margins, reachavoid_margin, c_x_t, c_xx_t, c_u_t, c_uu_t = self.forward_pass(states, controls, K_closed_loop, k_open_loop, alpha_chosen) 
-      if (np.abs((J-J_new) / J) < self.tol) and J_new>0:  # Small improvement.
-        converged = True
+      if (np.abs((J-J_new) / J) < self.tol):  # Small improvement.
+        status = 1
+        if J_new>0:
+          converged = True
 
       J = J_new
       
@@ -85,7 +87,6 @@ class iLQRReachAvoid(iLQR):
           break
       # Terminates early if the objective improvement is negligible.
       if converged:
-        status = 1
         break
 
     t_process = time.time() - time0
@@ -95,7 +96,7 @@ class iLQRReachAvoid(iLQR):
     k_open_loop = np.asarray(k_open_loop)
     solver_info = dict(
         states=states, controls=controls, reinit_controls=controls, t_process=t_process, status=status, Vopt=J, marginopt=reachavoid_margin,
-        grad_x=V_x, grad_xx=V_xx, B0=fu[:, :, 0]
+        grad_x=V_x, grad_xx=V_xx, B0=fu[:, :, 0], critical=critical
     )
 
     return controls[:, 0], solver_info
@@ -203,7 +204,7 @@ class iLQRReachAvoid(iLQR):
     critical = jnp.zeros(shape=(self.N,), dtype=int)
 
     reachavoid_margin = 0.
-    critical, reachavoid_margin = jax.lax.cond(target_margins[self.N - 1] <= failure_margins[self.N - 1], target_func, failure_func, 
+    critical, reachavoid_margin = jax.lax.cond(target_margins[self.N - 1] < failure_margins[self.N - 1], target_func, failure_func, 
                   (self.N - 1, critical, failure_margins[self.N - 1], target_margins[self.N - 1], reachavoid_margin)
     )
 
