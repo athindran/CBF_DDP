@@ -125,13 +125,13 @@ def main(config_file, plot_tag, road_boundary, is_task_ilqr):
 
   end_criterion = "failure"
 
-  yaw_constraints = [None, 1.57, 1.27]
+  yaw_constraints = [None, 0.5*np.pi, 0.4*np.pi]
 
   out_folder = config_solver.OUT_FOLDER
 
   if not config_solver.is_task_ilqr:
     out_folder = os.path.join(out_folder, "naivetask")
-
+  
   for ybindx, yaw_constraint in enumerate(yaw_constraints):
     for filter_type in ['CBF', 'LR']:
         print("Simulation starting...")
@@ -139,7 +139,10 @@ def main(config_file, plot_tag, road_boundary, is_task_ilqr):
         print("Yaw constraint", yaw_constraint)
         print("Filter type", filter_type)
         config_solver.FILTER_TYPE= filter_type
-        current_out_folder = os.path.join(out_folder, "road_boundary=" + str(road_boundary)+", yaw=" + str(yaw_constraint))
+        if yaw_constraint is not None:
+          current_out_folder = os.path.join(out_folder, "road_boundary=" + str(road_boundary)+", yaw=" + str(round(yaw_constraint,2)))
+        else:
+          current_out_folder = os.path.join(out_folder, "road_boundary=" + str(road_boundary)+", yaw=" + str(yaw_constraint))
         current_out_folder = os.path.join(current_out_folder, filter_type)
         config_solver.OUT_FOLDER = current_out_folder
         fig_folder = os.path.join(current_out_folder, "figure")
@@ -196,7 +199,7 @@ def main(config_file, plot_tag, road_boundary, is_task_ilqr):
             image = imageio.imread(filename)
             writer.append_data(image)
             Image(open(gif_path, 'rb').read(), width=400)
-        
+
         # endregion
   make_yaw_report(out_folder, plot_folder='./plots_paper/', tag=plot_tag, road_boundary=road_boundary)
 
