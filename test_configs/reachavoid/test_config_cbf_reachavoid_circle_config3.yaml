@@ -75,7 +75,7 @@ agent:
 solver:
   INIT_STATE: [0.0, 0.0, 0.4, 0.0, 0.0]
   N: 40
-  MAX_ITER: 10
+  MAX_ITER: 20
   MAX_ITER_RECEDING: 250
   # Line search options: 'baseline'.
   # Baseline seems to be good enough for most cases.
