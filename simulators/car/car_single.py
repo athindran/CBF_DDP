@@ -129,6 +129,7 @@ class CarSingle5DEnv(BaseSingleEnv):
         Dict: additional information of the step, such as target margin and
             safety margin used in reachability analysis.
     """
+    self.min_velocity = 0.05
     if end_criterion is None:
       end_criterion = self.end_criterion
 
@@ -141,6 +142,10 @@ class CarSingle5DEnv(BaseSingleEnv):
       if state[0] > self.track_len:
         done = True
         done_type = "leave_track with no failure"
+
+    if state[2]<self.min_velocity:
+        done = True
+        done_type = "safe stop"
 
     # Retrieves constraints / traget values.
     constraint_values = None
@@ -183,26 +188,6 @@ class CarSingle5DEnv(BaseSingleEnv):
       else:
         failure = np.any(constraint_values < 0.)
       if failure:
-        done = True
-        done_type = "failure"
-        g_x = self.g_x_fail
-    elif end_criterion == 'reach-avoid':
-      if final_only:
-        failure = g_x > 0.
-        success = not failure and l_x <= 0.
-      else:
-        v_x_list = np.empty(shape=(num_pts,))
-        v_x_list[num_pts
-                 - 1] = max(l_x_list[num_pts - 1], g_x_list[num_pts - 1])
-        for i in range(num_pts - 2, -1, -1):
-          v_x_list[i] = max(g_x_list[i], min(l_x_list[i], v_x_list[i + 1]))
-        inst = np.argmin(v_x_list)
-        failure = np.any(constraint_values[:, :inst + 1] > 0.)
-        success = not failure and (v_x_list[inst] <= 0)
-      if success:
-        done = True
-        done_type = "success"
-      elif failure:
         done = True
         done_type = "failure"
         g_x = self.g_x_fail
