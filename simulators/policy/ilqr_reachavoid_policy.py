@@ -45,6 +45,7 @@ class iLQRReachAvoid(iLQR):
     #target_margins = self.cost.get_mapped_target_margin(states, controls)
     target_margins, c_x_t, c_xx_t, c_u_t, c_uu_t = self.cost.get_mapped_target_margin_with_derivative(states, controls)
 
+    is_inside_target = (target_margins[0]>0)
     ctrl_costs = self.cost.ctrl_cost.get_mapped_margin(states, controls)
     critical, reachavoid__margin = self.get_critical_points(failure_margins, target_margins)
         
@@ -96,7 +97,7 @@ class iLQRReachAvoid(iLQR):
     k_open_loop = np.asarray(k_open_loop)
     solver_info = dict(
         states=states, controls=controls, reinit_controls=controls, t_process=t_process, status=status, Vopt=J, marginopt=reachavoid_margin,
-        grad_x=V_x, grad_xx=V_xx, B0=fu[:, :, 0], critical=critical
+        grad_x=V_x, grad_xx=V_xx, B0=fu[:, :, 0], critical=critical, is_inside_target=is_inside_target
     )
 
     return controls[:, 0], solver_info
