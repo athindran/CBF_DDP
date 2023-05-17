@@ -62,8 +62,8 @@ agent:
   # CAR DYNAMICS
   WHEELBASE: 0.3
   DT: 0.05
-  DELTA_MIN: -1.1  # rad
-  DELTA_MAX: 1.1
+  DELTA_MIN: -1.2  # rad
+  DELTA_MAX: 1.2
   #VMIN should be zero
   V_MIN: 0.0
   V_MAX: 2.0

@@ -31,8 +31,8 @@ cost:
   WT_OMEGA: 0.01
   W_TRACK: 0.01
   W_VEL: 0.01
-  YAWT_MIN: -1.3
-  YAWT_MAX: 1.3
+  YAWT_MIN: -1.2
+  YAWT_MAX: 1.2
   V_REF: 0.9
   VT_MIN: 0.0
   VT_MAX: 2.0
@@ -74,7 +74,7 @@ agent:
 
 solver:
   INIT_STATE: [0.0, 0.0, 0.6, 0.0, 0.0]
-  N: 40
+  N: 45
   MAX_ITER: 20
   MAX_ITER_RECEDING: 360
   # Line search options: 'baseline'.
