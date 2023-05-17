@@ -66,6 +66,7 @@ class iLQRSafetyFilter(iLQR):
     # Cruise policy
     start_time = time.time()
     initial_state = np.array(kwargs['state'])
+    stopping_ctrl = np.array([self.dyn.ctrl_space[0, 0], 0])
 
     if self.config.is_task_ilqr:
       task_policy, _ = self.task_ilqr.get_action(obs, None, **kwargs)
@@ -114,9 +115,13 @@ class iLQRSafetyFilter(iLQR):
         solver_info_0['reinit_controls'] = solver_info_0['reinit_controls'].at[:, -1].set(self.dyn.ctrl_space[0, 0])
         solver_info_0['mark_complete_filter'] = True
         solver_info_0['num_iters'] = 0
-        solver_info_0['deviation'] = np.linalg.norm(control_0 - task_policy)
+        solver_info_0['deviation'] = np.linalg.norm(control_0 - task_policy, ord=1)
         #print("Filtered control safe", control_0)
-        return control_0, solver_info_0
+        if solver_info_0['is_inside_target']:
+          # Render the target set controlled invariant
+          return stopping_ctrl, solver_info_0
+        else:
+          return control_0, solver_info_0
       else:
         solver_info_0['filter_steps'] = self.filter_steps
         solver_info_0['process_time'] = time.time() - start_time
@@ -153,10 +158,10 @@ class iLQRSafetyFilter(iLQR):
       scaled_c = constraint_violation
       
       #Scaling parameter
-      kappa = 1.3
+      kappa = 1.2
 
       # Exit loop once CBF constraint satisfied or maximum iterations violated
-      while((constraint_violation<cbf_tol or warmup) and num_iters<6):
+      while((constraint_violation<cbf_tol or warmup) and num_iters<5):
         num_iters= num_iters + 1
 
         # Extract information from solver for enforcing constraint
@@ -213,7 +218,7 @@ class iLQRSafetyFilter(iLQR):
         solver_info_0['reinit_states'] = jnp.array( solver_info_1['states'] )
         #solver_info_0['reinit_J'] = solver_info_1['Vopt'] 
         solver_info_0['num_iters'] = num_iters
-        solver_info_0['deviation'] = np.linalg.norm(initial_control - task_policy)
+        solver_info_0['deviation'] = np.linalg.norm(initial_control - task_policy, ord=1)
         solver_info_0['qcqp_initialize'] = initial_control - task_policy
         return initial_control.ravel(), solver_info_0
     
@@ -227,7 +232,13 @@ class iLQRSafetyFilter(iLQR):
     solver_info_0['reinit_controls'] = solver_info_0['controls']
     solver_info_0['mark_complete_filter'] = True
     solver_info_0['deviation'] = np.linalg.norm(control_0 - task_policy)
-    solver_info_0['qcqp_initialize'] = control_0 - task_policy
+    if solver_info_0['is_inside_target']:
+        # Render the target set controlled invariant
+        safety_control = stopping_ctrl
+    else:
+        safety_control = control_0
+    solver_info_0['qcqp_initialize'] = safety_control - task_policy
 
-    return control_0, solver_info_0
+    return safety_control, solver_info_0
+
 
