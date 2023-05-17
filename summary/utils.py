@@ -59,25 +59,22 @@ def plot_run_summary(dyn_id, env, state_history, action_history, config_solver, 
     
     if dyn_id=="Bicycle5D":
       fig, axes = plt.subplots(
-        1, 3, figsize=(15.0, 3.0)
+        1, 3, figsize=(16.0, 4.0)
       )
       ax = axes[0]
       ax.plot(kwargs["value_history"])
       ax.set_xlabel("Timestep")
       ax.set_ylabel("Receding Value function")
-      ax.grid()
     
       ax = axes[1]
       ax.plot(ctrls[0, :])
       ax.set_xlabel("Timestep")
       ax.set_ylabel("Acceleration control 1")
-      ax.grid()
 
       ax = axes[2]
       ax.plot(ctrls[1, :])
       ax.set_xlabel("Timestep")
       ax.set_ylabel("Steering control 1")
-      ax.grid()
 
       fig.savefig(os.path.join(fig_folder, "auxiliary_controls.png"), dpi=200)
 
@@ -109,7 +106,7 @@ def plot_run_summary(dyn_id, env, state_history, action_history, config_solver, 
     plt.xlabel('Time step')
     fig.savefig(os.path.join(fig_folder, "auxiliary_cbfiters.png"), dpi=200)
 
-def make_animation_plots(env, state_history, solver_info, config_solver, fig_prog_folder="./"):
+def make_animation_plots(env, state_history, solver_info, safety_plan, config_solver, fig_prog_folder="./"):
     fig, ax = plt.subplots(
         1, 1, figsize=(config_solver.FIG_SIZE_X, config_solver.FIG_SIZE_Y)
     )
@@ -141,10 +138,12 @@ def make_animation_plots(env, state_history, solver_info, config_solver, fig_pro
         env.render_footprint(ax=ax, state=state_history[-1], c=c_ego, lw=0.5)
 
     # plan.
-    ax.plot(
-        solver_info['states'][0, :], solver_info['states'][1, :], linewidth=0.5,
-        c='g', label='Safety plan'
-    )
+    if safety_plan is not None:
+        ax.plot(
+            safety_plan[0, :], safety_plan[1, :], linewidth=0.5,
+            c='g', label='Safety plan'
+        )
+
     # historyory.
     sc = ax.scatter(
         states[0, :-1], states[1, :-1], s=24, c=c_trace, marker='o'

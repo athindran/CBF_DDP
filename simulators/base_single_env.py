@@ -9,11 +9,16 @@ import numpy as np
 from gym import spaces
 from tqdm import tqdm
 
+import jax
+from jax import numpy as jnp
+from jaxlib.xla_extension import DeviceArray
+
 from .agent import Agent
 from .base_env import BaseEnv
 
 import copy
 
+from .policy.base_policy import BasePolicy
 
 class BaseSingleEnv(BaseEnv):
   """Implements an environment of a single agent.
@@ -160,7 +165,8 @@ class BaseSingleEnv(BaseEnv):
       reset_kwargs: Optional[Dict] = None,
       action_kwargs: Optional[Dict] = None,
       rollout_step_callback: Optional[Callable] = None,
-      rollout_episode_callback: Optional[Callable] = None, **kwargs
+      rollout_episode_callback: Optional[Callable] = None,
+      advanced_animate: bool=True, **kwargs
   ) -> Tuple[np.ndarray, int, Dict]:
     """
     Rolls out the trajectory given the horizon, termination criterion, reset
@@ -237,9 +243,30 @@ class BaseSingleEnv(BaseEnv):
       process_time_history.append(solver_info['process_time'])
       solver_iters_history.append(solver_info['num_iters'])
       deviation_history.append(solver_info['deviation'])
+
+      if advanced_animate:
+        # We plot the safety plan where we enter the target set, then decelerate and stop to remain safe for infinite time for an infeasible task plan
+        reachavoid_plan = solver_info['states']
+        reachavoid_plan_ctrl = solver_info['controls']
+
+        target_margins = self.cost.get_mapped_target_margin(reachavoid_plan, reachavoid_plan_ctrl)
+
+        target_margins = np.array(target_margins)
+
+        is_inside_target_index = np.argwhere(target_margins>0)[0][0]
+
+        target_plan = np.array( reachavoid_plan[:, 0:is_inside_target_index+1] )
+
+        stopping_plan = self.simulate_stopping_plan( initial_state = np.array(reachavoid_plan[:, is_inside_target_index]), 
+                                      stopping_ctrl=np.array([self.agent.dyn.ctrl_space[0, 0], 0]))
+
+        safety_plan = np.concatenate((target_plan, np.array(stopping_plan).T), axis=1)
+      else:
+        safety_plan = None
+
       if rollout_step_callback is not None:
         rollout_step_callback(
-            self, state_history, action_history, plan_history, step_history
+            self, state_history, action_history, plan_history, step_history, safety_plan=safety_plan
         )
 
       # Checks termination criterion.
@@ -269,6 +296,37 @@ class BaseSingleEnv(BaseEnv):
     )
 
     return np.array(state_history), result, info
+  
+  def simulate_stopping_plan(self, initial_state: np.ndarray, stopping_ctrl: np.ndarray):
+    """
+      Simulates the stopping plan from an initial state by applying maximum deceleration.
+      Deceleration policy renders the target set controlled invariant.
+    """
+    states = [initial_state]
+    current_state = np.array(initial_state)
+    while current_state[2]>self.agent.dyn.v_min:
+      current_state, _ = self.agent.integrate_forward(current_state, stopping_ctrl)
+      states.append(current_state)
+
+    return states
+  
+  def simulate_task_plan(self, initial_state: np.ndarray, task_policy: BasePolicy, nsteps:int, is_ilqr: bool):
+    """
+      UNUSED: Simulates the task plan from an initial state
+    """
+    states = [initial_state]
+    current_state = np.array(initial_state)
+    idx = 0
+    while idx<nsteps:
+      idx = idx + 1
+      if is_ilqr:
+        task_ctrl = task_policy.get_action(current_state, None, state=current_state)
+      else:
+        task_ctrl = task_policy( current_state )
+      current_state, _ = self.agent.integrate_forward(current_state, task_ctrl)
+      states.append(current_state)
+
+    return states
 
   def simulate_trajectories(
       self, num_trajectories: int, T_rollout: int, end_criterion: str,
