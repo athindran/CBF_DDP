@@ -129,7 +129,7 @@ class CarSingle5DEnv(BaseSingleEnv):
         Dict: additional information of the step, such as target margin and
             safety margin used in reachability analysis.
     """
-    self.min_velocity = 0.05
+    self.min_velocity = 0.0
     if end_criterion is None:
       end_criterion = self.end_criterion
 
@@ -143,7 +143,7 @@ class CarSingle5DEnv(BaseSingleEnv):
         done = True
         done_type = "leave_track with no failure"
 
-    if state[2]<self.min_velocity:
+    if state[2]<=self.min_velocity:
         done = True
         done_type = "safe stop"
 
