@@ -50,8 +50,12 @@ class iLQRSafetyFilter(iLQR):
     self.dim_u = dyn.dim_u
     self.N = config.N
 
+    self.is_task_ilqr = self.config.is_task_ilqr
+
     if self.config.is_task_ilqr:
-      self.task_ilqr = iLQR(self.id, self.config, self.rollout_dyn_2, self.task_cost)
+      self.task_policy = iLQR(self.id, self.config, self.rollout_dyn_2, self.task_cost)
+    else:
+      self.task_policy = bicycle_linear_task_policy
     # Two ILQ solvers
     if self.config.COST_TYPE=="Reachavoid":
       self.solver_0 = iLQRReachAvoid(self.id, self.config, self.rollout_dyn_0, self.cost)
@@ -69,9 +73,9 @@ class iLQRSafetyFilter(iLQR):
     stopping_ctrl = np.array([self.dyn.ctrl_space[0, 0], 0])
 
     if self.config.is_task_ilqr:
-      task_policy, _ = self.task_ilqr.get_action(obs, None, **kwargs)
+      task_ctrl, _ = self.task_policy.get_action(obs, None, **kwargs)
     else:
-      task_policy = bicycle_linear_task_policy( initial_state )
+      task_ctrl = self.task_policy( initial_state )
 
     # Find safe policy from step 0 
     if prev_sol is not None:
@@ -90,8 +94,8 @@ class iLQRSafetyFilter(iLQR):
     solver_info_0['mark_barrier_filter'] = False
     solver_info_0['mark_complete_filter'] = False
     # Find safe policy from step 1
-    state_imaginary, task_policy = self.dyn.integrate_forward(
-            state=initial_state, control=task_policy
+    state_imaginary, task_ctrl = self.dyn.integrate_forward(
+            state=initial_state, control=task_ctrl
     )
     kwargs['state'] = jnp.array( state_imaginary )
     boot_controls = jnp.array( solver_info_0['controls'] )
@@ -115,7 +119,7 @@ class iLQRSafetyFilter(iLQR):
         solver_info_0['reinit_controls'] = solver_info_0['reinit_controls'].at[:, -1].set(self.dyn.ctrl_space[0, 0])
         solver_info_0['mark_complete_filter'] = True
         solver_info_0['num_iters'] = 0
-        solver_info_0['deviation'] = np.linalg.norm(control_0 - task_policy, ord=1)
+        solver_info_0['deviation'] = np.linalg.norm(control_0 - task_ctrl, ord=1)
         #print("Filtered control safe", control_0)
         if solver_info_0['is_inside_target']:
           # Render the target set controlled invariant
@@ -131,13 +135,13 @@ class iLQRSafetyFilter(iLQR):
         solver_info_0['reinit_states'] = jnp.array( solver_info_1['states'] )
         solver_info_0['num_iters'] = 0
         solver_info_0['deviation'] = 0
-        #print("Filtered control task", task_policy)
-        return task_policy, solver_info_0
+        #print("Filtered control task", task_ctrl)
+        return task_ctrl, solver_info_0
     elif(self.filter_type=="CBF"):
       gamma = self.gamma
       cutoff = gamma*solver_info_0['Vopt']
       
-      initial_control = task_policy
+      initial_control = task_ctrl
 
       solver_initial = np.zeros((2,))
       if prev_sol is not None:
@@ -218,8 +222,8 @@ class iLQRSafetyFilter(iLQR):
         solver_info_0['reinit_states'] = jnp.array( solver_info_1['states'] )
         #solver_info_0['reinit_J'] = solver_info_1['Vopt'] 
         solver_info_0['num_iters'] = num_iters
-        solver_info_0['deviation'] = np.linalg.norm(initial_control - task_policy, ord=1)
-        solver_info_0['qcqp_initialize'] = initial_control - task_policy
+        solver_info_0['deviation'] = np.linalg.norm(initial_control - task_ctrl, ord=1)
+        solver_info_0['qcqp_initialize'] = initial_control - task_ctrl
         return initial_control.ravel(), solver_info_0
     
     self.filter_steps += 1
@@ -231,13 +235,13 @@ class iLQRSafetyFilter(iLQR):
     solver_info_0['num_iters'] = num_iters
     solver_info_0['reinit_controls'] = solver_info_0['controls']
     solver_info_0['mark_complete_filter'] = True
-    solver_info_0['deviation'] = np.linalg.norm(control_0 - task_policy)
+    solver_info_0['deviation'] = np.linalg.norm(control_0 - task_ctrl)
     if solver_info_0['is_inside_target']:
         # Render the target set controlled invariant
         safety_control = stopping_ctrl
     else:
         safety_control = control_0
-    solver_info_0['qcqp_initialize'] = safety_control - task_policy
+    solver_info_0['qcqp_initialize'] = safety_control - task_ctrl
 
     return safety_control, solver_info_0
 

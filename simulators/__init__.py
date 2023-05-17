@@ -16,6 +16,8 @@ from .costs.half_space_margin import (
 from .costs.base_margin import SoftBarrierEnvelope, BaseMargin
 from .costs.obs_margin import BoxObsMargin
 
+from .policy.base_policy import BasePolicy
+
 from .dynamics.bicycle5d import Bicycle5D
 #from .pendulum.pendulum import Pendulum
 from .car.car_single import CarSingle5DEnv
