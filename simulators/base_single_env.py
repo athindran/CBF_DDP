@@ -253,7 +253,12 @@ class BaseSingleEnv(BaseEnv):
 
         target_margins = np.array(target_margins)
 
-        is_inside_target_index = np.argwhere(target_margins>0)[0][0]
+        is_inside_target_index = np.argwhere(target_margins>=0).ravel()
+
+        if is_inside_target_index.size==0:
+          is_inside_target_index = 0
+        else:
+          is_inside_target_index = is_inside_target_index[0]
 
         target_plan = np.array( reachavoid_plan[:, 0:is_inside_target_index+1] )
 
