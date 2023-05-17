@@ -93,7 +93,7 @@ def main(config_file, plot_tag, road_boundary, is_task_ilqr):
   ):
     solver_info = plan_history[-1]
     states = np.array(state_history).T  # last one is the next state.
-    make_animation_plots(env, state_history, solver_info, config_solver, fig_prog_folder)
+    make_animation_plots(env, state_history, solver_info, kwargs['safety_plan'], config_solver, fig_prog_folder)
 
     if config_solver.FILTER_TYPE == "none":
       print(
@@ -131,7 +131,7 @@ def main(config_file, plot_tag, road_boundary, is_task_ilqr):
 
   if not config_solver.is_task_ilqr:
     out_folder = os.path.join(out_folder, "naivetask")
-    
+
   for ybindx, yaw_constraint in enumerate(yaw_constraints):
     for filter_type in ['CBF', 'LR']:
         print("Simulation starting...")
@@ -201,6 +201,7 @@ def main(config_file, plot_tag, road_boundary, is_task_ilqr):
             Image(open(gif_path, 'rb').read(), width=400)
 
         # endregion
+  
   make_yaw_report(out_folder, plot_folder='./plots_paper/', tag=plot_tag, road_boundary=road_boundary)
 
 if __name__ == "__main__":
