@@ -241,7 +241,6 @@ class Bicycle5DConstraintMargin( BaseMargin ):
     @jax.jit
     def roll_forward(args):
       current_state, stopping_ctrl, target_cost, v_min = args
-      current_state, _ = self.plan_dyn.integrate_forward_jax(current_state, stopping_ctrl)
 
       if self.use_road:
         target_cost = jnp.minimum(target_cost,  self.road_position_min_cost.get_stage_margin(
@@ -265,7 +264,9 @@ class Bicycle5DConstraintMargin( BaseMargin ):
             _obs_constraint: BaseMargin
             target_cost = jnp.minimum(target_cost,  _obs_constraint.get_stage_margin(
                 current_state, stopping_ctrl
-            ))  
+            )) 
+             
+      current_state, _ = self.plan_dyn.integrate_forward_jax(current_state, stopping_ctrl)     
 
       return current_state, stopping_ctrl, target_cost, v_min
     
