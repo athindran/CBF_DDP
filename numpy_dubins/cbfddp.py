@@ -52,8 +52,6 @@ def run_barrier_ilq(env, marginFunc, horizon, max_steps, gamma=0.9, barrier_scal
 
         imag_obs, control_perf = plan_env_2.step(run_env_obs, control_perf )
         
-        control_perf_init = control_perf
-
         boot_controls = solver_dict_plan_1['controls']
         boot_controls[0:-1] = boot_controls[1:]
         _, solver_dict_plan_2, constraints_data_plan_2 = lq_policy_2.get_action( np.array( imag_obs ) , initial_controls=boot_controls)
@@ -61,7 +59,7 @@ def run_barrier_ilq(env, marginFunc, horizon, max_steps, gamma=0.9, barrier_scal
 
         control_cbf = control_perf
 
-        constraint_violation = solver_dict_plan_2['complete_margin'] - gamma*(solver_dict_plan_1['complete_margin'])
+        constraint_violation = solver_dict_plan_2['reachable_margin'] - gamma*(solver_dict_plan_1['reachable_margin'])
         scaled_c = constraint_violation 
         
         if constraint_violation<0:
@@ -82,7 +80,6 @@ def run_barrier_ilq(env, marginFunc, horizon, max_steps, gamma=0.9, barrier_scal
         _, Bd, _, _ = plan_env_2.get_jacobian(run_env_obs, control_cbf)
 
         barrier_process_time = time.time() - barrier_start_time
-        barrier_failures = 0
         barrier_entries = 0
 
         eps_regularization = 1e-8
@@ -91,7 +88,7 @@ def run_barrier_ilq(env, marginFunc, horizon, max_steps, gamma=0.9, barrier_scal
         p = Bd.T @ constraints_data_plan_2['V_x']
         p_norm = np.linalg.norm( p )
 
-        while constraint_violation<barrier_tol and barrier_failures<5 and barrier_entries<7 and barrier_process_time<50:
+        while constraint_violation<barrier_tol and barrier_entries<5:
             barrier_entries = barrier_entries + 1
             if barrier_type=="linear":
                 control_correction = -p*scaled_c/((p_norm)**2 + 1e-12)
@@ -111,7 +108,7 @@ def run_barrier_ilq(env, marginFunc, horizon, max_steps, gamma=0.9, barrier_scal
             P = -eps_regularization*np.eye(lq_policy_1.action_dim) + Bd.T @ constraints_data_plan_2['V_xx'] @ Bd
             p = Bd.T @ constraints_data_plan_2['V_x']
             p_norm = np.linalg.norm( p )
-            constraint_violation = solver_dict_plan_2['complete_margin'] - gamma*(solver_dict_plan_1['complete_margin'])
+            constraint_violation = solver_dict_plan_2['reachable_margin'] - gamma*(solver_dict_plan_1['reachable_margin'])
             boot_controls = solver_dict_plan_2['controls']
             scaled_c = barrier_scaling*constraint_violation  
             barrier_process_time = time.time() - barrier_start_time
@@ -120,7 +117,7 @@ def run_barrier_ilq(env, marginFunc, horizon, max_steps, gamma=0.9, barrier_scal
             "[{}]: solver 1 returns margin {:.3f} and uses {:.3f}, solver 2 returns margin {:.3f} and uses {:.3f}.".format(time_step, solver_dict_plan_1['margin'], solver_dict_plan_1['t_process'], solver_dict_plan_2['margin'], solver_dict_plan_2['t_process'])
             )
         
-        if(solver_dict_plan_2['complete_margin']<=0):
+        if(solver_dict_plan_2['reachable_margin']<=0):
             complete_filter_indices.append( time_step )
             control = control_safe_1
             reinit_controls = solver_dict_plan_1['controls']

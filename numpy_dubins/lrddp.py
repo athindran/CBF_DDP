@@ -61,7 +61,7 @@ def run_lr_ilq(env, marginFunc, horizon, max_steps, threshold=0., seed=None, pol
             "[{}]: solver 1 returns margin {:.3f} and uses {:.3f} iterations, solver 2 returns margin {:.3f} and uses {:.3f} iterations.".format(time_step, solver_dict_plan_1['margin'], solver_dict_plan_1['iterations'], solver_dict_plan_2['margin'], solver_dict_plan_2['iterations'])
             )
         
-        if(solver_dict_plan_2['complete_margin']>threshold):
+        if(solver_dict_plan_2['reachable_margin']>threshold):
             control = np.array( control_perf )
             solver_dict_plan_1['task_active'] = True
             reinit_controls = np.array( solver_dict_plan_2['controls'] )

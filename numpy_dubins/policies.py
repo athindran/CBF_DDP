@@ -213,7 +213,7 @@ class ReachabilityLQPolicy:
         K_closed, K_open, updated_constraints_data = self.backward_pass(states, controls, False)
         
         process_time = time.time()-start_time
-        solver_dict = {"states": states, "controls": controls, "status": status, "margin": critical_margin, "complete_margin": J, "iteration_no": iters, "critical_constraint_type": 0,
+        solver_dict = {"states": states, "controls": controls, "status": status, "margin": critical_margin, "reachable_margin": J, "iteration_no": iters, "critical_constraint_type": 0,
                             "convergence": convergence_sequence, "label": "Optimal safety plan", "id": 'Optimal', "t_process": process_time, "iterations": iters}
         return controls[0], solver_dict, updated_constraints_data
 
