@@ -25,7 +25,7 @@ def barrier_filter_quadratic(P, p, c, initialize):
     # Check if P is PD
     if(check_nd):
       u = cp.Variable((2))
-      u.value = initialize
+      u.value = np.array( initialize )
       P = np.array(P)
       p = np.array(p)
       
@@ -38,7 +38,7 @@ def barrier_filter_quadratic(P, p, c, initialize):
     
     if(not check_nd or u[0] is None or prob.status not in ["optimal","optimal_inaccurate"]):
       u = cp.Variable((2))
-      u.value = initialize
+      u.value = np.array( initialize )
       p = np.array(p)
       prob = cp.Problem( cp.Minimize(1.0*cp.square(u[0]) + 1.0*cp.square(u[1])),
                       [ p @ u + c >= 0] )

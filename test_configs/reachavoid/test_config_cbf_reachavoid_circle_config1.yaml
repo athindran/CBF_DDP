@@ -66,15 +66,15 @@ agent:
   # CAR DYNAMICS
   WHEELBASE: 0.2
   DT: 0.05
-  DELTA_MIN: -1.1  # rad
-  DELTA_MAX: 1.1
+  DELTA_MIN: -1.2  # rad
+  DELTA_MAX: 1.2
   #VMIN should be zero
   V_MIN: 0.0
   V_MAX: 2.0
 
 solver:
   INIT_STATE: [0.0, 0.0, 0.6, 0.0, 0.0]
-  N: 45
+  N: 40
   MAX_ITER: 20
   MAX_ITER_RECEDING: 360
   # Line search options: 'baseline'.

@@ -131,7 +131,7 @@ def main(config_file, plot_tag, road_boundary, is_task_ilqr):
 
   if not config_solver.is_task_ilqr:
     out_folder = os.path.join(out_folder, "naivetask")
-
+  
   for ybindx, yaw_constraint in enumerate(yaw_constraints):
     for filter_type in ['CBF', 'LR']:
         print("Simulation starting...")

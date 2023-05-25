@@ -86,7 +86,7 @@ env.track_length = 4.5
 
 marginFunc = ReachabilityMarginFunction3D( ego_radius=ego_radius, obstacles=obstacle_list, obstacle_radius=obstacle_radius )
 
-run = True
+run = False
 
 if run:
     solver_dict_hcbf = run_heuristic_cbf(env, dubins_task_policy, marginFunc, max_steps)
@@ -133,8 +133,12 @@ ax[0].set_xticks(np.array([-3.5, 2.0]), fontsize=6)
 ax[0].tick_params(axis='both', labelsize=6)
 ax[0].set_ylim([-1.5, 3.0])
 ax[0].set_xlim([-3.5, 2.0])
-ax[0].legend(fontsize=6, bbox_to_anchor=(2.2, 1.32), ncol=3, fancybox=True, shadow=True)
+ax[0].legend(fontsize=6, bbox_to_anchor=(2.2, 1.32), ncol=3, fancybox=True, shadow=False)
 ax[0].tick_params("both", labelsize=6)
+ax[0].set_xlabel("X position", fontsize=6)
+ax[0].set_ylabel("Y position", fontsize=6)
+ax[0].yaxis.set_label_coords(-0.1, 0.5)
+ax[0].xaxis.set_label_coords(.5, -.1)
 ax[0].set_aspect('equal')
 
 ax[1].plot(solver_dict_lr_1["controls_deviation"][:, 0], linewidth=1, color='r', linestyle='dashed')
