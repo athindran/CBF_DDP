@@ -192,7 +192,7 @@ def make_yaw_report(prefix="./exps_may/ilqr/bic5D/yaw_testing/", plot_folder="./
                 rblist.append(rb)
 
                 if sh=='LR' and yc is None:
-                    showlist.append(True)
+                    showlist.append(False)
                 else:
                     showlist.append(True)                
             
@@ -279,7 +279,7 @@ def make_yaw_report(prefix="./exps_may/ilqr/bic5D/yaw_testing/", plot_folder="./
                     else:
                         ax.plot(state_data[barrier_filter_indices, 0], state_data[barrier_filter_indices, 1], 'x', color=colorlist[int(idx)], alpha=0.7, markersize=3.0)
     
-            ax.legend(fontsize=legend_fontsize, loc='upper left', ncol=4, bbox_to_anchor=(0.0, 1.35), fancybox=True, shadow=True)
+            ax.legend(fontsize=legend_fontsize, loc='upper left', ncol=4, bbox_to_anchor=(0.0, 1.35), fancybox=False, shadow=False)
             ax.set_xticks([0, 0.5*env.visual_extent[1], env.visual_extent[1]], fontsize=legend_fontsize)
             ax.set_yticks([env.visual_extent[2], 0, env.visual_extent[3]], fontsize=legend_fontsize)
             ax.plot(np.linspace(0, env.visual_extent[1], 100), np.array([rblist[idx]]*100), 'k--')
@@ -318,7 +318,7 @@ def make_yaw_report(prefix="./exps_may/ilqr/bic5D/yaw_testing/", plot_folder="./
             #axes[0].grid(True)
             axes[0].set_xticks([], fontsize=3, labelsize=3)
             axes[0].set_yticks([action_space[0, 0], 0, action_space[0, 1]], fontsize=3, labelsize=3)
-            axes[0].legend(fontsize=legend_fontsize, loc='upper left', ncol=3, bbox_to_anchor=(-0.05, 1.4), fancybox=True, shadow=True)
+            axes[0].legend(fontsize=legend_fontsize, loc='upper left', ncol=3, bbox_to_anchor=(-0.05, 1.4), fancybox=False, shadow=False)
 
             axes[1].set_xlabel('Time index', fontsize=legend_fontsize)
             axes[1].set_ylabel('Steering control', fontsize=legend_fontsize)
