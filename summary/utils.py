@@ -59,7 +59,7 @@ def plot_run_summary(dyn_id, env, state_history, action_history, config_solver, 
     
     if dyn_id=="Bicycle5D":
       fig, axes = plt.subplots(
-        1, 3, figsize=(16.0, 4.0)
+        1, 3, figsize=(16.0, 2.5)
       )
       ax = axes[0]
       ax.plot(kwargs["value_history"])
@@ -100,11 +100,11 @@ def plot_run_summary(dyn_id, env, state_history, action_history, config_solver, 
     plt.xlabel('Time step')
     fig.savefig(os.path.join(fig_folder, "auxiliary_cycletimes.png"), dpi=200)
 
-    fig = plt.figure(figsize=(7, 4))
-    plt.plot(kwargs["solver_iters_history"])
-    plt.ylabel('Solver iterations')
-    plt.xlabel('Time step')
-    fig.savefig(os.path.join(fig_folder, "auxiliary_cbfiters.png"), dpi=200)
+    #fig = plt.figure(figsize=(7, 4))
+    #plt.plot(kwargs["solver_iters_history"])
+    #plt.ylabel('Solver iterations')
+    #plt.xlabel('Time step')
+    #fig.savefig(os.path.join(fig_folder, "auxiliary_cbfiters.png"), dpi=200)
 
 def make_animation_plots(env, state_history, solver_info, safety_plan, config_solver, fig_prog_folder="./"):
     fig, ax = plt.subplots(
@@ -227,6 +227,10 @@ def make_yaw_report(prefix="./exps_may/ilqr/bic5D/yaw_testing/", plot_folder="./
         config_file = prefix+"/"+suffix+"/config.yaml"
         config = load_config( config_file )
         config_env = config['environment']
+
+        config_env.TRACK_WIDTH_RIGHT = road_boundary
+        config_env.TRACK_WIDTH_LEFT = road_boundary
+
         config_agent = config["agent"] 
         config_solver= config["solver"]
         config_cost = config["cost"]
