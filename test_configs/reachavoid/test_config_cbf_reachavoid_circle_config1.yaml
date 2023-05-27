@@ -72,7 +72,7 @@ agent:
 
 solver:
   INIT_STATE: [0.0, 0.0, 0.6, 0.0, 0.0]
-  N: 40
+  N: 45
   MAX_ITER: 20
   MAX_ITER_RECEDING: 360
   # Line search options: 'baseline'.
