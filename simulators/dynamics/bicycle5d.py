@@ -105,7 +105,6 @@ class Bicycle5D(BaseDynamics):
 
     return state_nxt
   
-  """
   @partial(jax.jit, static_argnames='self')
   def get_jacobian_fx(
       self, obs: DeviceArray, control: DeviceArray
@@ -140,7 +139,6 @@ class Bicycle5D(BaseDynamics):
 
       return Bd
   
-  
   @partial(jax.jit, static_argnames='self')
   def get_jacobian(
       self, nominal_states: DeviceArray, nominal_controls: DeviceArray
@@ -166,5 +164,3 @@ class Bicycle5D(BaseDynamics):
       Bd = self.dt * Bc
 
       return Ad, Bd
-  """
-
