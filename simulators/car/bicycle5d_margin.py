@@ -315,9 +315,9 @@ class Bicycle5DConstraintMargin( BaseMargin ):
     def roll_forward(args):
       current_state, stopping_ctrl, target_cost, v_min, c_x_target, c_xx_target, iters, pinch_point, f_x_all = args
       
-      f_x_curr, f_u_curr = self.plan_dyn.get_jacobian(current_state[:, jnp.newaxis], stopping_ctrl[:, jnp.newaxis])
-      f_x_all = f_x_all.at[:, :, iters].set(f_x_curr[:, :, -1])
-      #f_x_all = f_x_all.at[:, :, iters].set(self.plan_dyn.get_jacobian_fx(current_state, stopping_ctrl))
+      #f_x_curr, f_u_curr = self.plan_dyn.get_jacobian(current_state[:, jnp.newaxis], stopping_ctrl[:, jnp.newaxis])
+      #f_x_all = f_x_all.at[:, :, iters].set(f_x_curr[:, :, -1])
+      f_x_all = f_x_all.at[:, :, iters].set(self.plan_dyn.get_jacobian_fx(current_state, stopping_ctrl))
 
       for _obs_constraint in self.obs_constraint:
         _obs_constraint: BaseMargin
