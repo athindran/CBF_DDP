@@ -93,6 +93,7 @@ class iLQRSafetyFilter(iLQR):
       solver_info_0['Vopt'] = solver_info_0['Vopt_next']
       solver_info_0['marginopt'] = solver_info_0['marginopt_next']
       solver_info_0['is_inside_target'] = solver_info_0['is_inside_target_next']
+      solver_info_0['states'] = solver_info_0['reinit_states']
     
     solver_info_0['mark_barrier_filter'] = False
     solver_info_0['mark_complete_filter'] = False
