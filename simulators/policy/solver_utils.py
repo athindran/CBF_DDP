@@ -65,6 +65,6 @@ def bicycle_linear_task_policy( run_env_obs ):
       if np.abs(alpha)<0.1:
         control_task[1] = -1.0*run_env_obs[4] 
       else:    
-        control_task[1] = -1.1*alpha - 0.9*run_env_obs[4]
+        control_task[1] = -1.2*alpha - 0.9*run_env_obs[4]
 
     return control_task
