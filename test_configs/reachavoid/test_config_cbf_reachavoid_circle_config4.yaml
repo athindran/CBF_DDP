@@ -3,8 +3,6 @@ environment:
   NUM_AGENTS: 1
   # TRACK
   TRACK_LEN: 6.0
-  TRACK_WIDTH_RIGHT: 1.2
-  TRACK_WIDTH_LEFT: 1.2
   # LOOP: true
   TIMEOUT: 100
   # DONE FLAG PARAM
