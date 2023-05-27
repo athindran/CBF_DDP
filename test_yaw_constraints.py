@@ -41,6 +41,11 @@ def main(config_file, plot_tag, road_boundary, is_task_ilqr):
   config_cost.V_MAX = config_agent.V_MAX
   config_cost.DELTA_MAX = config_agent.DELTA_MAX
 
+  config_cost.TRACK_WIDTH_RIGHT = road_boundary
+  config_cost.TRACK_WIDTH_LEFT = road_boundary
+  config_env.TRACK_WIDTH_RIGHT = road_boundary
+  config_env.TRACK_WIDTH_LEFT = road_boundary
+
   env = CarSingle5DEnv(config_env, config_agent, config_cost)
   x_cur = np.array(getattr(config_solver, "INIT_STATE", [0., 0., 0.5, 0., 0.]))
   env.reset(x_cur)
@@ -199,9 +204,7 @@ def main(config_file, plot_tag, road_boundary, is_task_ilqr):
             image = imageio.imread(filename)
             writer.append_data(image)
             Image(open(gif_path, 'rb').read(), width=400)
-
         # endregion
-  
   make_yaw_report(out_folder, plot_folder='./plots_paper/', tag=plot_tag, road_boundary=road_boundary)
 
 if __name__ == "__main__":
@@ -218,7 +221,7 @@ if __name__ == "__main__":
 
   parser.add_argument(
       "-rb", "--road_boundary", help="Choose road width", type=float,
-      default=1.2
+      default=2.0
   )
 
   parser.add_argument('--naive_task', dest='naive_task', action='store_true')
