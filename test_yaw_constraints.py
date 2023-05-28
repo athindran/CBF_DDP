@@ -1,7 +1,3 @@
-"""
-Please contact the author(s) of this library if you have any questions.
-Authors:  Kai-Chieh Hsu ( kaichieh@princeton.edu )
-"""
 from typing import Dict
 import os
 import sys
@@ -136,8 +132,8 @@ def main(config_file, plot_tag, road_boundary, is_task_ilqr):
 
   if not config_solver.is_task_ilqr:
     out_folder = os.path.join(out_folder, "naivetask")
-
-  for ybindx, yaw_constraint in enumerate(yaw_constraints):
+  
+  for _, yaw_constraint in enumerate(yaw_constraints):
     for filter_type in ['CBF', 'LR']:
         print("Simulation starting...")
         print("Road boundary", road_boundary)
@@ -203,7 +199,7 @@ def main(config_file, plot_tag, road_boundary, is_task_ilqr):
             filename = os.path.join(fig_prog_folder, str(i + 1) + ".png")
             image = imageio.imread(filename)
             writer.append_data(image)
-            Image(open(gif_path, 'rb').read(), width=400)
+            #Image(open(gif_path, 'rb').read(), width=400)
         # endregion
   make_yaw_report(out_folder, plot_folder='./plots_paper/', tag=plot_tag, road_boundary=road_boundary)
 
