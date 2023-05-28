@@ -156,8 +156,8 @@ def helper_plot(solver_dicts, obstacle_list=None, obstacle_radius=0, save_prefix
                         value_plot, convergence_plot, flipped, xlimits, ylimits, ego_radius, road_boundary, costFunc, legend_fontsize=legend_fontsize, label_size=label_size)
 
 
-    ax.set_yticks(np.array([-0.2, 1.0, 3.2]), fontsize=label_size)
-    ax.set_xticks(np.array([-3.5, 0.0, 2.0]), fontsize=label_size)
+    ax.set_yticks(ticks=np.array([-0.2, 1.0, 3.2]), labels=np.array([-0.2, 1.0, 3.2]), fontsize=label_size)
+    ax.set_xticks(ticks=np.array([-3.5, 0.0, 2.0]), labels=np.array([-3.5, 0.0, 2.0]), fontsize=label_size)
     ax.tick_params(axis='both', labelsize=label_size)
     ax.legend(fontsize=6)
     plt.ylabel("Y position", fontsize=label_size)
@@ -204,8 +204,8 @@ def helper_plot(solver_dicts, obstacle_list=None, obstacle_radius=0, save_prefix
     ax.tick_params(axis='both', labelsize=label_size)
     plt.ylabel("Steer control deviation", fontsize=label_size)
     plt.xlabel("Time step", fontsize=label_size)
-    ax.set_yticks([0.0 , 1.0, 2.0], fontsize=label_size)
-    ax.set_xticks([0, 30, 60, 90, 120, 150], fontsize=label_size)
+    ax.set_yticks(ticks=[0.0 , 1.0, 2.0], labels=[0.0 , 1.0, 2.0], fontsize=label_size)
+    ax.set_xticks(ticks=[0, 30, 60, 90, 120, 150], labels=[0, 30, 60, 90, 120, 150], fontsize=label_size)
     ax.set_ylim([0, 2.5])
     #plt.grid()
     plt.legend(fontsize=legend_fontsize, ncol=1)

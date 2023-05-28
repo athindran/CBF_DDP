@@ -86,7 +86,7 @@ env.track_length = 4.5
 
 marginFunc = ReachabilityMarginFunction3D( ego_radius=ego_radius, obstacles=obstacle_list, obstacle_radius=obstacle_radius )
 
-run = False
+run = True
 
 if run:
     solver_dict_hcbf = run_heuristic_cbf(env, dubins_task_policy, marginFunc, max_steps)
@@ -129,8 +129,8 @@ if plotting:
                         ,legend_fontsize=10, label_size=10)
 
 #plt.tight_layout()
-ax[0].set_yticks(np.array([-1.5, 3.0]), fontsize=10)
-ax[0].set_xticks(np.array([-3.5, 2.0]), fontsize=10)
+ax[0].set_yticks(ticks=np.array([-1.5, 3.0]), labels=np.array([-1.5, 3.0]), fontsize=10)
+ax[0].set_xticks(ticks=np.array([-3.5, 2.0]), labels=np.array([-3.5, 2.0]), fontsize=10)
 ax[0].tick_params(axis='both', labelsize=10)
 ax[0].set_ylim([-1.5, 3.0])
 ax[0].set_xlim([-3.5, 2.0])
@@ -154,8 +154,8 @@ ax[1].plot(solver_dict_barrier_1["controls_deviation"][:, 0], linewidth=1, color
 ax[1].xaxis.set_label_coords(.5, -.05)
 ax[1].yaxis.set_label_coords(-0.05, 0.5)
 ax[1].tick_params("both", labelsize=10)
-ax[1].set_yticks([0, 2])
-ax[1].set_xticks([0, 150])
+ax[1].set_yticks(ticks=[0, 2], labels=[0, 2])
+ax[1].set_xticks(ticks=[0, 150], labels=[0, 150])
 ax[1].set_xlim([0, 150])
 ax[1].set_ylim([0, 2.2])
 
