@@ -11,8 +11,8 @@ environment:
   OBSC_TYPE: circle
   OBS_SPEC:
     - [2.0, 0.0, 0.3]
-    - [4.0, 0.6, 0.25]
-    - [4.8, -0.6, 0.25]
+    - [4.0, 0.6, 0.3]
+    - [4.8, -0.6, 0.3]
   RESET_SPACE:
     - [0., 8.0]
     - [-0.4, 0.4]
@@ -34,7 +34,7 @@ cost:
   Q1_V: 0.1
   Q2_V: 0.1
   Q1_YAW: 0.1
-  Q2_YAW: 0.3
+  Q2_YAW: 0.2
   BARRIER_CLIP_MIN: -0.25
   BARRIER_CLIP_MAX: 5.0
   
