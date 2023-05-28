@@ -1,8 +1,3 @@
-"""
-Please contact the author(s) of this library if you have any questions.
-Authors:  Kai-Chieh Hsu ( kaichieh@princeton.edu )
-"""
-
 from multiprocessing.sharedctypes import Value
 from typing import Optional, Tuple, Any, Union, Dict, List, Callable
 import copy

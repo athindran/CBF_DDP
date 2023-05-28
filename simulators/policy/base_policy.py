@@ -1,13 +1,8 @@
-"""
-Please contact the author(s) of this library if you have any questions.
-Authors:  Kai-Chieh Hsu ( kaichieh@princeton.edu )
-"""
 from __future__ import annotations
 from abc import ABC, abstractmethod
 import copy
 from typing import Callable, Tuple, Union, Dict, List, Optional
 import numpy as np
-import torch
 
 
 class BasePolicy(ABC):

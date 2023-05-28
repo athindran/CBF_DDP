@@ -1,14 +1,8 @@
-"""
-Please contact the author(s) of this library if you have any questions.
-Authors:  Kai-Chieh Hsu ( kaichieh@princeton.edu )
-"""
-
 from abc import ABC, abstractmethod
 from typing import Dict, Tuple, Optional
 import random
 import numpy as np
 import gym
-import torch
 
 from .utils import GenericAction, GenericState
 
@@ -55,12 +49,13 @@ class BaseEnv(gym.Env, ABC):
     self.seed_val = seed
     self.rng = np.random.default_rng(seed)
     random.seed(self.seed_val)
+    """
     torch.manual_seed(self.seed_val)
     torch.cuda.manual_seed(self.seed_val)
     torch.cuda.manual_seed_all(self.seed_val)  # if using multi-GPU.
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
-
+    """
     self.action_space.seed(seed)
     self.observation_space.seed(seed)
 

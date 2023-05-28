@@ -1,13 +1,8 @@
-"""
-Please contact the author(s) of this library if you have any questions.
-Authors: Kai-Chieh Hsu ( kaichieh@princeton.edu )
-"""
 from typing import Dict, Tuple, Optional, Union
 import numpy as np
 from matplotlib import pyplot as plt
 import matplotlib
 from gym import spaces
-import torch
 
 from jax import numpy as jnp
 
@@ -242,9 +237,9 @@ class CarSingle5DEnv(BaseSingleEnv):
 
   # endregion
   def reset(
-      self, state: Optional[np.ndarray] = None, cast_torch: bool = False,
+      self, state: Optional[np.ndarray] = None,
       **kwargs
-  ) -> Union[np.ndarray, torch.FloatTensor]:
+  ) -> Union[np.ndarray, np.ndarray]:
     """
     Resets the environment and returns the new state.
 
@@ -274,8 +269,6 @@ class CarSingle5DEnv(BaseSingleEnv):
     self.state = state.copy()
 
     obs = self.get_obs(state)
-    if cast_torch:
-      obs = torch.FloatTensor(obs)
     return obs
 
   def get_obs(self, state: np.ndarray) -> np.ndarray:

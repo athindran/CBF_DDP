@@ -1,8 +1,3 @@
-"""
-Please contact the author(s) of this library if you have any questions.
-Authors:  Kai-Chieh Hsu ( kaichieh@princeton.edu )
-"""
-
 from abc import abstractmethod
 from typing import Any, Tuple, Optional, Callable, List, Dict, Union
 import numpy as np

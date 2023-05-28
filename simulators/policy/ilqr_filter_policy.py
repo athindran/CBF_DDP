@@ -1,7 +1,3 @@
-"""
-Please contact the author(s) of this library if you have any questions.
-Authors:  Athindran Ramesh Kumar (arkumar@princeton.edu),  Kai-Chieh Hsu ( kaichieh@princeton.edu )
-"""
 from typing import Tuple, Optional, Dict
 import time
 
@@ -88,7 +84,8 @@ class iLQRSafetyFilter(iLQR):
     else:
       # Potential source of acceleration. We don't need to resolve both ILQs as we can reuse solution from previous time. - Unused currently.
       solver_info_0 = prev_sol['bootstrap_next_solution']
-      control_0 = solver_info_0['controls'][:, 0]
+      control_0 = solver_info_0['controls'][:, 0] + solver_info_0['K_closed_loop'][:, :, 0] @ (initial_state - solver_info_0['states'][:, 0])
+      # Closed loop solution
       #solver_info_0['controls'] = jnp.array( solver_info_0['reinit_controls'] )
       #solver_info_0['states'] = jnp.array( solver_info_0['reinit_states'] )
       #solver_info_0['Vopt'] = solver_info_0['Vopt_next']
@@ -221,7 +218,7 @@ class iLQRSafetyFilter(iLQR):
         solver_info_0['barrier_filter_steps'] = self.barrier_filter_steps
         solver_info_0['filter_steps'] = self.filter_steps
         solver_info_0['process_time'] = time.time() - start_time
-        solver_info_0['resolve'] = True
+        solver_info_0['resolve'] = False
         solver_info_0['bootstrap_next_solution'] = solver_info_1
         solver_info_0['reinit_controls'] = jnp.array( solver_info_1['controls'] )
         solver_info_0['reinit_states'] = jnp.array( solver_info_1['states'] )
@@ -247,7 +244,8 @@ class iLQRSafetyFilter(iLQR):
         # Render the target set controlled invariant
         safety_control = stopping_ctrl
     else:
-        safety_control = control_0
+        safety_control = solver_info_0['controls'][:, 0] + solver_info_0['K_closed_loop'][:, :, 0] @ (initial_state - solver_info_0['states'][:, 0])
+
     solver_info_0['qcqp_initialize'] = safety_control - task_ctrl
 
     return safety_control, solver_info_0

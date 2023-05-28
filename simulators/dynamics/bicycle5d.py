@@ -1,8 +1,3 @@
-"""
-Please contact the author(s) of this library if you have any questions.
-Authors:  Kai-Chieh Hsu ( kaichieh@princeton.edu )
-"""
-
 from typing import Tuple, Any
 import numpy as np
 from functools import partial
