@@ -87,13 +87,13 @@ class iLQRSafetyFilter(iLQR):
       control_0, solver_info_0 = self.solver_0.get_action(obs, controls_initialize, **kwargs)
     else:
       # Potential source of acceleration. We don't need to resolve both ILQs as we can reuse solution from previous time. - Unused currently.
-      solver_info_0 = prev_sol
-      solver_info_0['controls'] = jnp.array( solver_info_0['reinit_controls'] )
+      solver_info_0 = prev_sol['bootstrap_next_solution']
       control_0 = solver_info_0['controls'][:, 0]
-      solver_info_0['Vopt'] = solver_info_0['Vopt_next']
-      solver_info_0['marginopt'] = solver_info_0['marginopt_next']
-      solver_info_0['is_inside_target'] = solver_info_0['is_inside_target_next']
-      solver_info_0['states'] = solver_info_0['reinit_states']
+      #solver_info_0['controls'] = jnp.array( solver_info_0['reinit_controls'] )
+      #solver_info_0['states'] = jnp.array( solver_info_0['reinit_states'] )
+      #solver_info_0['Vopt'] = solver_info_0['Vopt_next']
+      #solver_info_0['marginopt'] = solver_info_0['marginopt_next']
+      #solver_info_0['is_inside_target'] = solver_info_0['is_inside_target_next']
     
     solver_info_0['mark_barrier_filter'] = False
     solver_info_0['mark_complete_filter'] = False
@@ -135,6 +135,7 @@ class iLQRSafetyFilter(iLQR):
         solver_info_0['filter_steps'] = self.filter_steps
         solver_info_0['process_time'] = time.time() - start_time
         solver_info_0['resolve'] = False
+        solver_info_0['bootstrap_next_solution'] = solver_info_1
         solver_info_0['reinit_controls'] = jnp.array( solver_info_1['controls'] )
         solver_info_0['reinit_states'] = jnp.array( solver_info_1['states'] )
         solver_info_0['num_iters'] = 0
@@ -220,7 +221,8 @@ class iLQRSafetyFilter(iLQR):
         solver_info_0['barrier_filter_steps'] = self.barrier_filter_steps
         solver_info_0['filter_steps'] = self.filter_steps
         solver_info_0['process_time'] = time.time() - start_time
-        solver_info_0['resolve'] = False
+        solver_info_0['resolve'] = True
+        solver_info_0['bootstrap_next_solution'] = solver_info_1
         solver_info_0['reinit_controls'] = jnp.array( solver_info_1['controls'] )
         solver_info_0['reinit_states'] = jnp.array( solver_info_1['states'] )
         #solver_info_0['reinit_J'] = solver_info_1['Vopt'] 
@@ -236,7 +238,9 @@ class iLQRSafetyFilter(iLQR):
     solver_info_0['process_time'] = time.time() - start_time
     solver_info_0['resolve'] = True
     solver_info_0['num_iters'] = num_iters
-    solver_info_0['reinit_controls'] = solver_info_0['controls']
+    solver_info_0['reinit_controls'] = jnp.zeros((self.dim_u, self.N))
+    solver_info_0['reinit_controls'] = solver_info_0['reinit_controls'].at[:, 0:self.N-1].set(solver_info_0['controls'][:, 1:self.N])
+    solver_info_0['reinit_controls'] = solver_info_0['reinit_controls'].at[:, -1].set(self.dyn.ctrl_space[0, 0])    
     solver_info_0['mark_complete_filter'] = True
     solver_info_0['deviation'] = np.linalg.norm(control_0 - task_ctrl)
     if solver_info_0['is_inside_target']:

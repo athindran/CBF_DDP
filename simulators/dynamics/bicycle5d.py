@@ -138,7 +138,7 @@ class Bicycle5D(BaseDynamics):
       Bd = self.dt * Bc
 
       return Bd
-  
+
   @partial(jax.jit, static_argnames='self')
   def get_jacobian(
       self, nominal_states: DeviceArray, nominal_controls: DeviceArray

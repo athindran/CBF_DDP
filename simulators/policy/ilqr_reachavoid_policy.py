@@ -65,7 +65,7 @@ class iLQRReachAvoid(iLQR):
       #)
 
       fx, fu = self.dyn.get_jacobian(states[:, :-1], controls[:, :-1])
-      V_x, V_xx, k_open_loop, K_closed_loop, V_x_critical, V_xx_critical = self.backward_pass(
+      V_x, V_xx, k_open_loop, K_closed_loop, _, _ = self.backward_pass(
           c_x=c_x, c_u=c_u, c_xx=c_xx, c_uu=c_uu, c_ux=c_ux, c_x_t=c_x_t, c_u_t=c_u_t, c_xx_t=c_xx_t, c_uu_t=c_uu_t, c_ux_t=None, fx=fx, fu=fu,
           critical=critical
       )

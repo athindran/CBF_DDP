@@ -346,7 +346,7 @@ class Bicycle5DConstraintMargin( BaseMargin ):
         new_cost = self.yaw_min_cost.get_stage_margin( current_state, stopping_ctrl )
         c_x_new = self.yaw_min_cost.get_cx(current_state[:, jnp.newaxis], stopping_ctrl[:, jnp.newaxis])
         # Half space cost has no second derivative
-        c_xx_new = self.yaw_min_cost.get_cxx(current_state[:, jnp.newaxis], stopping_ctrl[:, jnp.newaxis])
+        c_xx_new = jnp.zeros((self.dim_x, self.dim_x, 1))
         target_cost, c_x_target, c_xx_target, pinch_point = jax.lax.cond(new_cost<target_cost, true_fn, false_fn, (new_cost, target_cost, c_x_target, c_xx_target, c_x_new, c_xx_new, iters, pinch_point)) 
         
         new_cost = self.yaw_max_cost.get_stage_margin( current_state, stopping_ctrl )
