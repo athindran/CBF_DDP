@@ -1,14 +1,8 @@
-"""
-Please contact the author(s) of this library if you have any questions.
-Authors:  Kai-Chieh Hsu ( kaichieh@princeton.edu )
-"""
-
 from __future__ import annotations
 import sys
 from typing import TypeVar, TypedDict, List, Any, Optional, Union, Tuple, Dict
 import numpy as np
 from gym import spaces
-import torch
 import pickle
 
 
@@ -66,8 +60,8 @@ GenericAction = TypeVar(
 )
 
 GenericState = TypeVar(
-    'GenericState', torch.FloatTensor, np.ndarray,
-    Dict[str, torch.FloatTensor], Dict[str, np.ndarray]
+    'GenericState', np.ndarray, np.ndarray,
+    np.ndarray, np.ndarray
 )
 
 

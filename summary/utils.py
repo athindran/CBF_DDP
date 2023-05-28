@@ -79,7 +79,7 @@ def plot_run_summary(dyn_id, env, state_history, action_history, config_solver, 
       fig.savefig(os.path.join(fig_folder, "auxiliary_controls.png"), dpi=200)
 
     fig, axes = plt.subplots(
-        1, 2, figsize=(8.0, 2.5)
+        1, 2, figsize=(10.0, 2.5)
     )
     ax = axes[0]
     ax.plot(states[2, :])
@@ -299,13 +299,15 @@ def make_yaw_report(prefix="./exps_may/ilqr/bic5D/yaw_testing/", plot_folder="./
                         ax.plot(state_data[barrier_filter_indices, 0], state_data[barrier_filter_indices, 1], 'x', color=colorlist[int(idx)], alpha=0.7, markersize=5.0)
     
             ax.legend(framealpha=0, fontsize=legend_fontsize, loc='upper left', ncol=4, bbox_to_anchor=(0.0, 1.35), fancybox=False, shadow=False)
-            ax.set_xticks([0, env.visual_extent[1]], fontsize=legend_fontsize)
-            ax.set_yticks([env.visual_extent[2], env.visual_extent[3]], fontsize=legend_fontsize)
+
             
             if hide_label:
                 fra = plt.gca()
                 fra.axes.xaxis.set_ticklabels([])
                 fra.axes.yaxis.set_ticklabels([])
+            else:
+                ax.set_xticks(ticks=[0, env.visual_extent[1]], labels=[0, env.visual_extent[1]], fontsize=legend_fontsize)
+                ax.set_yticks(ticks=[env.visual_extent[2], env.visual_extent[3]], labels=[env.visual_extent[2], env.visual_extent[3]], fontsize=legend_fontsize)
 
             ax.plot(np.linspace(0, env.visual_extent[1], 100), np.array([rblist[idx]]*100), 'k--')
             ax.plot(np.linspace(0, env.visual_extent[1], 100), np.array([-1*rblist[idx]]*100), 'k--')
@@ -331,7 +333,7 @@ def make_yaw_report(prefix="./exps_may/ilqr/bic5D/yaw_testing/", plot_folder="./
                 nsteps = controls_data.shape[0]
                 maxsteps = np.maximum(maxsteps, nsteps)
                 fillarray = np.zeros(nsteps)
-                fillarray[np.array(plot_states_barrier_filter_list[idx], dtype=np.int)] = 1
+                fillarray[np.array(plot_states_barrier_filter_list[idx], dtype=np.int64)] = 1
                 axes[0].plot(controls_data[:, 0], label=labellist[int(idx)], c=colorlist[int(idx)], alpha = 1.0, linewidth=1.5, linestyle='solid')
                 axes[1].plot(controls_data[:, 1], label=labellist[int(idx)], c=colorlist[int(idx)], alpha = 1.0, linewidth=1.5, linestyle='solid')
                 axes[0].fill_between(range(nsteps), action_space[0, 0], action_space[0, 1], where=fillarray, color='b', alpha=0.3)
@@ -341,8 +343,8 @@ def make_yaw_report(prefix="./exps_may/ilqr/bic5D/yaw_testing/", plot_folder="./
                 #axes[0].set_xlabel('Time index', fontsize=legend_fontsize)
                 axes[0].set_ylabel('Acceleration', fontsize=legend_fontsize)
             #axes[0].grid(True)
-            axes[0].set_xticks([], fontsize=5, labelsize=5)
-            axes[0].set_yticks([action_space[0, 0], action_space[0, 1]], fontsize=5, labelsize=5)
+            axes[0].set_xticks(ticks=[], labels=[], fontsize=5, labelsize=5)
+            axes[0].set_yticks(ticks=[action_space[0, 0], action_space[0, 1]], labels=[action_space[0, 0], action_space[0, 1]], fontsize=legend_fontsize)
             axes[0].legend(framealpha=0, fontsize=legend_fontsize, loc='upper left', ncol=3, bbox_to_anchor=(-0.05, 1.4), fancybox=False, shadow=False)
             axes[0].yaxis.set_label_coords(-0.04, 0.5)
 
@@ -354,8 +356,8 @@ def make_yaw_report(prefix="./exps_may/ilqr/bic5D/yaw_testing/", plot_folder="./
                 #axes[1].set_xlabel('Time index', fontsize=legend_fontsize)
                 axes[1].set_ylabel('Steer control', fontsize=legend_fontsize)
             #axes[1].grid(True)
-            axes[1].set_xticks([0, maxsteps], fontsize=legend_fontsize, labelsize=legend_fontsize)
-            axes[1].set_yticks([action_space[1, 0], action_space[1, 1]], fontsize=legend_fontsize, labelsize=legend_fontsize)
+            axes[1].set_xticks(ticks=[0, maxsteps], labels=[0, maxsteps], fontsize=legend_fontsize)
+            axes[1].set_yticks(ticks=[action_space[1, 0], action_space[1, 1]], labels=[action_space[1, 0], action_space[1, 1]], fontsize=legend_fontsize)
             #axes[1].legend(fontsize=legend_fontsize)
             axes[1].yaxis.set_label_coords(-0.04, 0.5)
             axes[1].xaxis.set_label_coords(0.5, -0.04)

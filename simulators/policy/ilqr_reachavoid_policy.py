@@ -1,7 +1,3 @@
-"""
-Please contact the author(s) of this library if you have any questions.
-Authors:  Athindran Ramesh Kumar, Kai-Chieh Hsu ( arkumar@princeton.edu )
-"""
 from typing import Tuple, Optional, Dict
 import time
 import numpy as np
@@ -97,7 +93,7 @@ class iLQRReachAvoid(iLQR):
     k_open_loop = np.asarray(k_open_loop)
     solver_info = dict(
         states=states, controls=controls, reinit_controls=controls, t_process=t_process, status=status, Vopt=J, marginopt=reachavoid_margin,
-        grad_x=V_x, grad_xx=V_xx, B0=fu[:, :, 0], critical=critical, is_inside_target=is_inside_target
+        grad_x=V_x, grad_xx=V_xx, B0=fu[:, :, 0], critical=critical, is_inside_target=is_inside_target, K_closed_loop=K_closed_loop, k_open_loop=k_open_loop
     )
 
     return controls[:, 0], solver_info

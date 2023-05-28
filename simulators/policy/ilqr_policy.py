@@ -1,7 +1,3 @@
-"""
-Please contact the author(s) of this library if you have any questions.
-Authors:  Kai-Chieh Hsu ( kaichieh@princeton.edu )
-"""
 from typing import Tuple, Optional, Dict
 import time
 import copy
