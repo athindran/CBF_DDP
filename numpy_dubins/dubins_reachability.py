@@ -121,37 +121,51 @@ else:
     solver_dict_lr_1 = pickle.load( open("./dubins_plots_animate/lrddp.pkl", "rb") )
 
 plotting=True
-fig, ax = plt.subplots(1, 2, figsize=(3.2, 1.5))
+show_label = False
+fig, ax = plt.subplots(1, 2, figsize=(6.4, 3.0), gridspec_kw={'height_ratios': [1]})
 if plotting:
     plot_dubins_trajectory(fig, ax[0], [ solver_dict_hcbf, solver_dict_barrier_1, solver_dict_lr_1 ], obstacle_list=obstacle_list, obstacle_radius=obstacle_radius,
-                        value_plot=True, flipped=False, xlimits=[-3.5, 2.0], ylimits=[-0.2, 3.5], ego_radius=0.15, marginFunc=None, show_legend=True
-                        ,legend_fontsize=6, label_size=6)
+                        value_plot=True, flipped=False, xlimits=[-3.5, 2.0], ylimits=[-0.2, 3.5], ego_radius=0.15, marginFunc=None, show_legend=True, show_label=show_label
+                        ,legend_fontsize=10, label_size=10)
 
-plt.tight_layout()
-ax[0].set_yticks(np.array([-1.5, 3.0]), fontsize=6)
-ax[0].set_xticks(np.array([-3.5, 2.0]), fontsize=6)
-ax[0].tick_params(axis='both', labelsize=6)
+#plt.tight_layout()
+ax[0].set_yticks(np.array([-1.5, 3.0]), fontsize=10)
+ax[0].set_xticks(np.array([-3.5, 2.0]), fontsize=10)
+ax[0].tick_params(axis='both', labelsize=10)
 ax[0].set_ylim([-1.5, 3.0])
 ax[0].set_xlim([-3.5, 2.0])
-ax[0].legend(fontsize=6, bbox_to_anchor=(2.2, 1.32), ncol=3, fancybox=True, shadow=False)
-ax[0].tick_params("both", labelsize=6)
-ax[0].set_xlabel("X position", fontsize=6)
-ax[0].set_ylabel("Y position", fontsize=6)
-ax[0].yaxis.set_label_coords(-0.1, 0.5)
-ax[0].xaxis.set_label_coords(.5, -.1)
-ax[0].set_aspect('equal')
+ax[0].legend(framealpha=0, fontsize=8, bbox_to_anchor=(1.3, 1.2), ncol=3, fancybox=False, shadow=False)
+ax[0].tick_params("both", labelsize=10)
+
+if show_label:
+    ax[0].set_xlabel("X position", fontsize=10)
+    ax[0].set_ylabel("Y position", fontsize=10)
+else:
+    ax[0].set_xticklabels([])
+    ax[0].set_yticklabels([])
+ax[0].yaxis.set_label_coords(-0.05, 0.5)
+ax[0].xaxis.set_label_coords(.5, -.05)
+#ax[0].set_aspect('equal')
 
 ax[1].plot(solver_dict_lr_1["controls_deviation"][:, 0], linewidth=1, color='r', linestyle='dashed')
 ax[1].plot(solver_dict_hcbf["controls_deviation"][:, 0], linewidth=1, color='m', linestyle='solid')
 ax[1].plot(solver_dict_barrier_1["controls_deviation"][:, 0], linewidth=1, color='b', linestyle='dashdot')
-ax[1].set_ylabel("Control deviation", fontsize=6)
-ax[1].set_xlabel("Time step", fontsize=6)
-ax[1].xaxis.set_label_coords(.5, -.1)
-ax[1].tick_params("both", labelsize=6)
-ax[1].set_yticks([0, 1, 2])
+
+ax[1].xaxis.set_label_coords(.5, -.05)
+ax[1].yaxis.set_label_coords(-0.05, 0.5)
+ax[1].tick_params("both", labelsize=10)
+ax[1].set_yticks([0, 2])
 ax[1].set_xticks([0, 150])
 ax[1].set_xlim([0, 150])
 ax[1].set_ylim([0, 2.2])
 
-fig.savefig("./dubins_plots_animate/paper_combined.pdf")
-fig.savefig("./dubins_plots_animate/paper_combined.png")
+if show_label:
+    ax[1].set_ylabel("Control deviation", fontsize=10)
+    ax[1].set_xlabel("Time step", fontsize=10)
+else:
+    ax[1].set_xticklabels([])
+    ax[1].set_yticklabels([])
+
+fig.tight_layout()
+fig.savefig("./dubins_plots_animate/paper_combined" + str(show_label) + ".pdf", dpi=200, bbox_inches='tight', transparent=not show_label)
+fig.savefig("./dubins_plots_animate/paper_combined" + str(show_label) + ".png", dpi=200, bbox_inches='tight', transparent=not show_label)

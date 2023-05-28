@@ -7,7 +7,7 @@ import imageio
 from IPython.display import Image
 
 def plot_dubins_trajectory(fig, ax, solver_dicts, obstacle_list=None, obstacle_radius=0,
-                        value_plot=False, convergence_plot=False, flipped=False, xlimits=[-3.5, 2.0], ylimits=[-0.2, 3.5], ego_radius=0.1, road_boundary=[-1.0, 1.0], marginFunc=None, show_legend=True
+                        value_plot=False, convergence_plot=False, show_label=True, flipped=False, xlimits=[-3.5, 2.0], ylimits=[-0.2, 3.5], ego_radius=0.1, road_boundary=[-1.0, 1.0], marginFunc=None, show_legend=True
                         ,legend_fontsize=8, label_size=9):
     colors = {}
     colors['color0'] = 'r'
@@ -60,10 +60,16 @@ def plot_dubins_trajectory(fig, ax, solver_dicts, obstacle_list=None, obstacle_r
     for idx, solver_dict in enumerate(solver_dicts):
         dict_id = solver_dict['id']
         if solver_dict['task_active']:
-            ax.plot(solver_dict['states'][:, 0], solver_dict['states'][:, 1], label=solver_dict['label'], linestyle=styles[dict_id], linewidth=1.0, color=colors[dict_id])
+            if show_label:
+                ax.plot(solver_dict['states'][:, 0], solver_dict['states'][:, 1], label=solver_dict['label'], linestyle=styles[dict_id], linewidth=1.0, color=colors[dict_id])
+            else:
+                ax.plot(solver_dict['states'][:, 0], solver_dict['states'][:, 1], label='                 ', linestyle=styles[dict_id], linewidth=1.0, color=colors[dict_id])
         else:
-            ax.plot(solver_dict['states'][:, 0], solver_dict['states'][:, 1], label=solver_dict['label'], linestyle=styles[dict_id], linewidth=1.0, color=colors[dict_id])
-            
+            if show_label:
+                ax.plot(solver_dict['states'][:, 0], solver_dict['states'][:, 1], label=solver_dict['label'], linestyle=styles[dict_id], linewidth=1.0, color=colors[dict_id])
+            else:
+                ax.plot(solver_dict['states'][:, 0], solver_dict['states'][:, 1], label='                 ', linestyle=styles[dict_id], linewidth=1.0, color=colors[dict_id])
+
         #if solver_dict['label'][0:3]=="CBF":
         #    complete_shield_indices = solver_dict['complete_shield_indices']
         #    barrier_shield_indices = solver_dict['barrier_shield_indices']
@@ -97,10 +103,10 @@ def plot_dubins_trajectory(fig, ax, solver_dicts, obstacle_list=None, obstacle_r
     circle_goal = plt.Circle([1.5, 1.5], 0.15, color='g', alpha=0.6)
     ax.add_patch(circle_goal)
     
-    ax.set_xlim(xlimits)
-    ax.set_ylim(ylimits)
-    ymin, ymax = ax.get_ylim()
-    xmin, xmax = ax.get_xlim()
+    #ax.set_xlim(xlimits)
+    #ax.set_ylim(ylimits)
+    #ymin, ymax = ax.get_ylim()
+    #xmin, xmax = ax.get_xlim()
 
     if show_legend:
         ax.legend(fontsize=legend_fontsize, loc='upper left')
