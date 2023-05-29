@@ -5,9 +5,9 @@ Here, we construct a CBF up to second-order in real-time using DDP optimization.
 
 Further, the directory numpy_dubins contains our numpy testing framework on the 3D dubins car.
 
-Python dependencies for running the code is available inside **requirements.txt**. 
+Python dependencies for running the code is available inside *requirements.txt*. 
 
-The yaml file format for providing configuration is **/test_configs/reachavoid/test_config_cbf_reachavoid_circle_cbf_config1.yaml**
+The yaml file format for providing configuration is */test_configs/reachavoid/test_config_cbf_reachavoid_circle_cbf_config1.yaml*
 
 To reproduce experiments in the paper, it is sufficient to run:
 
@@ -17,7 +17,10 @@ To reproduce experiments in the paper, it is sufficient to run:
 
 Here, -cf defines the config files, --naive_task toggles the naive task policy that uses hand-tuned linear feedback to enable task completion, -pt defines the tag id for saving the plots and -rb defines the road boundary limits. The applicability of the naive policy is limited.
 
-The corresponding trajectories and controls plots are generated inside **/plots_paper**.
+The corresponding trajectories and controls plots are generated inside */plots_paper*.
+
+![task_traj](./plots_paper/reachavoidcf1_naive_taskFalse_jax_trajectories.png)
+![task_ctrl](./plots_paper/reachavoidcf1_naive_taskFalse_jax_controls.png)
 
 Using the elaborately tuned ILQR policy with multiple cost functions and weights to adjust various desiderata, it is possible to see that both LR-DDP and CBF-DDP are enough to result in guaranteed safe filtering without compromising on task completion.
 ```
