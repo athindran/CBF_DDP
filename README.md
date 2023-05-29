@@ -19,8 +19,8 @@ Here, -cf defines the config files, --naive_task toggles the naive task policy t
 
 The corresponding trajectories and controls plots are generated inside */plots_paper*.
 
-![task_traj](./plots_paper/reachavoidcf1_naive_taskFalse_jax_trajectories.png)
-![task_ctrl](./plots_paper/reachavoidcf1_naive_taskFalse_jax_controls.png)
+<img src="./plots_paper/reachavoidcf1_naive_taskFalse_jax_trajectories.png" width="40%" height="40%">
+<img src="./plots_paper/reachavoidcf1_naive_taskFalse_jax_controls.png" width="40%" height="40%">
 
 Using the elaborately tuned ILQR policy with multiple cost functions and weights to adjust various desiderata, it is possible to see that both LR-DDP and CBF-DDP are enough to result in guaranteed safe filtering without compromising on task completion.
 ```
