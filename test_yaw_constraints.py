@@ -126,7 +126,7 @@ def main(config_file, plot_tag, road_boundary, is_task_ilqr):
 
   end_criterion = "failure"
 
-  yaw_constraints = [None, 0.5*np.pi, 0.4*np.pi]
+  yaw_constraints = [None]
 
   out_folder = config_solver.OUT_FOLDER
 
@@ -201,7 +201,7 @@ def main(config_file, plot_tag, road_boundary, is_task_ilqr):
             writer.append_data(image)
             #Image(open(gif_path, 'rb').read(), width=400)
         # endregion
-  make_yaw_report(out_folder, plot_folder='./plots_paper/', tag=plot_tag, road_boundary=road_boundary)
+  #make_yaw_report(out_folder, plot_folder='./plots_paper/', tag=plot_tag, road_boundary=road_boundary)
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser()

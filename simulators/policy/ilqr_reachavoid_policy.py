@@ -17,7 +17,7 @@ class iLQRReachAvoid(iLQR):
       agents_action: Optional[Dict] = None,**kwargs
   ) -> np.ndarray:
     status = 0
-    self.tol = 1e-6
+    self.tol = 1e-4
 
     if controls is None:
       controls = np.zeros((self.dim_u, self.N))
@@ -56,7 +56,7 @@ class iLQRReachAvoid(iLQR):
           states, controls
       )
 
-      #c_x_t, c_u_t, c_xx_t, c_uu_t, c_ux_t = self.cost.get_derivatives_target(
+      #c_x_t, c_u_t, c_xx_t, c_uu_t, _ = self.cost.get_derivatives_target(
       #    states, controls
       #)
 
@@ -70,7 +70,7 @@ class iLQRReachAvoid(iLQR):
       alpha_chosen = self.baseline_line_search( states, controls, K_closed_loop, k_open_loop, J)
       #alpha_chosen = self.armijo_line_search( states, controls, K_closed_loop, k_open_loop, critical, J, c_u)
 
-      #states, controls, J_new, critical, failure_margins, target_margins, reachavoid_margin, _, _, _, _ = self.forward_pass(states, controls, K_closed_loop, k_open_loop, alpha_chosen)        
+      #states, controls, J_new, critical, failure_margins, target_margins, reachavoid_margin = self.forward_pass(states, controls, K_closed_loop, k_open_loop, alpha_chosen)        
       states, controls, J_new, critical, failure_margins, target_margins, reachavoid_margin, c_x_t, c_xx_t, c_u_t, c_uu_t = self.forward_pass(states, controls, K_closed_loop, k_open_loop, alpha_chosen) 
       if (np.abs((J-J_new) / J) < self.tol):  # Small improvement.
         status = 1
@@ -109,6 +109,7 @@ class iLQRReachAvoid(iLQR):
       states, controls, K_closed_loop, k_open_loop, alpha, J, J_new = args
       alpha = beta*alpha
       _, _, J_new, _, _, _, _, _, _, _, _ = self.forward_pass(states, controls, K_closed_loop, k_open_loop, alpha)
+      #_, _, J_new, _, _, _, _ = self.forward_pass(states, controls, K_closed_loop, k_open_loop, alpha)
       return states, controls, K_closed_loop, k_open_loop, alpha, J, J_new
 
     @jax.jit
@@ -239,6 +240,7 @@ class iLQRReachAvoid(iLQR):
     #err, future_cost = checked_margin(failure_margins, target_margins, reachavoid_margin)
     #err.throw()
 
+    #return X, U, J, critical, failure_margins, target_margins, reachavoid_margin
     return X, U, J, critical, failure_margins, target_margins, reachavoid_margin, c_x_t, c_xx_t, c_u_t, c_uu_t
 
   """

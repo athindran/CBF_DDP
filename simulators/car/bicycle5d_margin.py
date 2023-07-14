@@ -4,6 +4,7 @@ from functools import partial
 from jaxlib.xla_extension import DeviceArray
 import jax.numpy as jnp
 import jax
+import math
 
 from ..costs.base_margin import BaseMargin, SoftBarrierEnvelope
 from ..costs.obs_margin import CircleObsMargin
@@ -155,6 +156,8 @@ class Bicycle5DConstraintMargin( BaseMargin ):
     self.obs_spec = config.OBS_SPEC
     self.obsc_type = config.OBSC_TYPE
     self.plan_dyn = plan_dyn
+
+    self.max_stopping_steps = math.fabs( plan_dyn.v_max/plan_dyn.ctrl_space[0, 1] )
 
     self.dim_x = plan_dyn.dim_x
     self.dim_u = plan_dyn.dim_u
