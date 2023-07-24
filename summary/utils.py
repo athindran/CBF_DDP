@@ -77,6 +77,26 @@ def plot_run_summary(dyn_id, env, state_history, action_history, config_solver, 
       ax.set_ylabel("Steering control 1")
 
       fig.savefig(os.path.join(fig_folder, "auxiliary_controls.png"), dpi=200)
+    elif dyn_id=="Integrator2D":
+      fig, axes = plt.subplots(
+        1, 3, figsize=(16.0, 2.5)
+      )
+      ax = axes[0]
+      ax.plot(kwargs["value_history"])
+      ax.set_xlabel("Timestep")
+      ax.set_ylabel("Receding Value function")
+    
+      ax = axes[1]
+      ax.plot(ctrls[0, :])
+      ax.set_xlabel("Timestep")
+      ax.set_ylabel("Acceleration control 1")
+
+      ax = axes[2]
+      ax.plot(ctrls[1, :])
+      ax.set_xlabel("Timestep")
+      ax.set_ylabel("Acceleration control 2")
+
+      fig.savefig(os.path.join(fig_folder, "auxiliary_controls.png"), dpi=200)
 
     fig, axes = plt.subplots(
         1, 2, figsize=(10.0, 2.5)
@@ -87,12 +107,12 @@ def plot_run_summary(dyn_id, env, state_history, action_history, config_solver, 
     ax.set_ylabel("Velocity")
     ax.grid()
     
-    ax = axes[1]
-    ax.plot(states[4, :])
-    ax.set_xlabel("Timestep")
-    ax.set_ylabel("Delta")
-    ax.grid()
-    fig.savefig(os.path.join(fig_folder, "auxiliary_velocity.png"), dpi=200)
+    #ax = axes[1]
+    #ax.plot(states[4, :])
+    #ax.set_xlabel("Timestep")
+    #ax.set_ylabel("Delta")
+    #ax.grid()
+    #fig.savefig(os.path.join(fig_folder, "auxiliary_velocity.png"), dpi=200)
 
     fig = plt.figure(figsize=(7, 4))
     plt.plot(kwargs["process_time_history"])
