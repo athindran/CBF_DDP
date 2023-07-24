@@ -1,0 +1,70 @@
+environment:
+  SEED: 0
+  NUM_AGENTS: 1
+  # TRACK
+  TRACK_LEN: 7
+  # LOOP: true
+  TIMEOUT: 100
+  # DONE FLAG PARAM
+  END_CRITERION: failure
+  G_X_FAIL: 0.0
+  OBSC_TYPE: circle
+  OBS_SPEC:
+    - [2.5, 0.0, 0.25]
+    - [4.5, 0.0, 0.2]
+    - [6.5, 0.0, 0.2]
+  #  - [11.0, 0.1, 0.35]
+  RESET_SPACE:
+    - [0., 8.0]
+    - [-0.4, 0.4]
+    - [0.5, 1.5]
+    - [-0.3, 0.3]
+
+cost:
+  # Task policy tuned weights
+  WT_ACCEL: 0.01
+  WT_OMEGA: 0.01
+  W_TRACK: 0.01
+  W_VEL: 0.01
+  V_REF: 0.9
+  Q1_V: 0.1
+  Q2_V: 0.1
+  BARRIER_CLIP_MIN: -0.25
+  BARRIER_CLIP_MAX: 5.0
+  
+  # Safety DDP parameters
+  COST_TYPE: Reachability
+  # SAFETY COST PARAM
+  W_ACCEL: 0.0001
+
+agent:
+  AGENT_ID: ego
+  DYN: Integrator2D
+  FOOTPRINT: Circle
+  EGO_RADIUS: 0.1
+  ACTION_RANGE:
+    - [-0.5, 0.5]
+    - [-0.5, 0.5]
+  # CAR DYNAMICS
+  DT: 0.05
+  #VMIN should be zero
+  V_MIN: 0.1
+  V_MAX: 2.0
+
+solver:
+  INIT_STATE: [0.0, 0.0, 0.6, 0.0] 
+  N: 50
+  MAX_ITER: 25
+  MAX_ITER_RECEDING: 150
+  # Line search options: 'baseline'.
+  LINE_SEARCH: 'baseline'
+  # Filter options: 'none', 'LR', 'CBF'
+  FILTER_TYPE: 'CBF'
+  CBF_TYPE: 'quadratic'
+  BARRIER_GAMMA: 0.9
+  LR_THRESHOLD: 0.0
+  OUT_FOLDER: exps_may/ilqr/bic5D/reachable_integ_experiment_config1/
+  DEVICE: cpu
+  FIG_SIZE_X: 8
+  FIG_SIZE_Y: 2.5
+  FRAME_SKIP: 2

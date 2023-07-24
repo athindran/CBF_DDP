@@ -7,7 +7,7 @@ from jax import numpy as jnp
 
 from .base_dynamics import BaseDynamics
 
-class Bicycle5D(BaseDynamics):
+class Integrator2D(BaseDynamics):
 
   def __init__(self, config: Any, action_space: np.ndarray) -> None:
     """
@@ -18,14 +18,11 @@ class Bicycle5D(BaseDynamics):
         action_space (np.ndarray): action space.
     """
     super().__init__(config, action_space)
-    self.dim_x = 5  # [x, y, v, psi, delta].
-
-    # load parameters
-    self.wheelbase: float = config.WHEELBASE  # vehicle chassis length
-    self.delta_min = config.DELTA_MIN
-    self.delta_max = config.DELTA_MAX
-    self.v_min = 0
-    self.v_max = config.V_MAX
+    self.dim_x = 4  # [x, y, xdot, ydot].
+    self.x_min = -0.5
+    self.x_max = 13
+    self.y_min = -2.0
+    self.y_max = 2.0
 
   @partial(jax.jit, static_argnames='self')
   def integrate_forward_jax(
@@ -33,8 +30,8 @@ class Bicycle5D(BaseDynamics):
   ) -> Tuple[DeviceArray, DeviceArray]:
     """Clips the control and computes one-step time evolution of the system.
     Args:
-        state (DeviceArray): [x, y, v, psi, delta].
-        control (DeviceArray): [accel, omega].
+        state (DeviceArray): [x, y, xdot, ydot].
+        control (DeviceArray): [accelx, accely].
     Returns:
         DeviceArray: next state.
         DeviceArray: clipped control.
@@ -51,11 +48,10 @@ class Bicycle5D(BaseDynamics):
       self, state: DeviceArray, control: DeviceArray
   ) -> DeviceArray:
     deriv = jnp.zeros((self.dim_x,))
-    deriv = deriv.at[0].set(state[2] * jnp.cos(state[3]))
-    deriv = deriv.at[1].set(state[2] * jnp.sin(state[3]))
-    deriv = deriv.at[2].set(control[0])
-    deriv = deriv.at[3].set(state[2] * jnp.tan(state[4]) / self.wheelbase)
-    deriv = deriv.at[4].set(control[1])
+    deriv = deriv.at[0].set( state[2] )
+    deriv = deriv.at[1].set( state[3] )
+    deriv = deriv.at[2].set( control[0] )
+    deriv = deriv.at[3].set( control[1] )
     return deriv
 
   @partial(jax.jit, static_argnames='self')
@@ -64,14 +60,13 @@ class Bicycle5D(BaseDynamics):
   ) -> DeviceArray:
     """ Computes one-step time evolution of the system: x_+ = f(x, u).
     The discrete-time dynamics is as below:
-        x_k+1 = x_k + v_k cos(psi_k) dt
-        y_k+1 = y_k + v_k sin(psi_k) dt
-        v_k+1 = v_k + u0_k dt
-        psi_k+1 = psi_k + v_k tan(delta_k) / L dt
-        delta_k+1 = delta_k + u1_k dt
+        x_k+1 = x_k + vx_k dt
+        y_k+1 = y_k + vy_k dt
+        vx_k+1 = vx_k + u0_k dt
+        vy_k+1 = vy_k + u1_k dt
     Args:
-        state (DeviceArray): [x, y, v, psi, delta].
-        control (DeviceArray): [accel, omega].
+        state (DeviceArray): [x, y, vx, vy].
+        control (DeviceArray): [ax, ay].
     Returns:
         DeviceArray: next state.
     """
@@ -87,12 +82,13 @@ class Bicycle5D(BaseDynamics):
     k4 = self.disc_deriv(state + k3*dt, ctrl_clip)
     
     state_nxt = state + (k1 + 2*k2 + 2*k3 + k4) * dt / 6
-    state_nxt = state_nxt.at[2].set(
-         jnp.clip(state_nxt[2], self.v_min, self.v_max)
+    
+    state_nxt = state_nxt.at[0].set(
+         jnp.clip(state_nxt[0], self.x_min, self.x_max)
     )
     
-    state_nxt = state_nxt.at[4].set(
-         jnp.clip(state_nxt[4], self.delta_min, self.delta_max)
+    state_nxt = state_nxt.at[1].set(
+         jnp.clip(state_nxt[1], self.y_min, self.y_max)
     )
 
     return state_nxt
@@ -101,30 +97,22 @@ class Bicycle5D(BaseDynamics):
   def get_jacobian_fx(
       self, obs: DeviceArray, control: DeviceArray
   ) -> Tuple[DeviceArray, DeviceArray]:
-      Ac = jnp.array([[0, 0, jnp.cos(obs[3]), -obs[2]*jnp.sin(obs[3]), 0],
-                      [0, 0, jnp.sin(obs[3]), obs[2]*jnp.cos(obs[3]), 0],
-                      [0, 0, 0, 0, 0],
-                      [0, 0, jnp.tan(obs[4])/self.wheelbase, 0, obs[2]/(1e-6 + self.wheelbase*jnp.cos(obs[4])**2)],
-                      [0, 0, 0, 0, 0]  ])
+      Ac = jnp.array([[0, 0, 1, 0],
+                      [0, 0, 0, 1],
+                      [0, 0, 0, 0],
+                      [0, 0, 0, 0]])
       
-      Ad = jnp.eye(self.dim_x) + Ac*self.dt + 0.5*Ac@Ac*self.dt*self.dt
+      Ad = jnp.eye(self.dim_x) + Ac*self.dt
         
       return Ad
   
   @partial(jax.jit, static_argnames='self')
   def get_jacobian_fu(
       self, obs: DeviceArray, control: DeviceArray
-  ) -> DeviceArray: 
-      Ac = jnp.array([[0, 0, jnp.cos(obs[3]), -obs[2]*jnp.sin(obs[3]), 0],
-                      [0, 0, jnp.sin(obs[3]), obs[2]*jnp.cos(obs[3]), 0],
-                      [0, 0, 0, 0, 0],
-                      [0, 0, jnp.tan(obs[4])/self.wheelbase, 0, obs[2]/(1e-6 + self.wheelbase*jnp.cos(obs[4])**2)],
-                      [0, 0, 0, 0, 0]])
-      
+  ) -> DeviceArray:
       Bc = np.array([[0, 0],
                       [0, 0],
                       [1, 0],
-                      [0, 0],
                       [0, 1]])
       
       Bd = self.dt * Bc
@@ -140,19 +128,18 @@ class Bicycle5D(BaseDynamics):
 
   @partial(jax.jit, static_argnames='self')
   def get_jacobian_fx_fu(self, obs: DeviceArray, control: DeviceArray) -> Tuple:
-      Ac = jnp.array([[0, 0, jnp.cos(obs[3]), -obs[2]*jnp.sin(obs[3]), 0],
-                      [0, 0, jnp.sin(obs[3]), obs[2]*jnp.cos(obs[3]), 0],
-                      [0, 0, 0, 0, 0],
-                      [0, 0, jnp.tan(obs[4])/self.wheelbase, 0, obs[2]/(1e-6 + self.wheelbase*jnp.cos(obs[4])**2)],
-                      [0, 0, 0, 0, 0]])
+      Ac = jnp.array([[0, 0, 1, 0],
+                      [0, 0, 0, 1],
+                      [0, 0, 0, 0],
+                      [0, 0, 0, 0]])
+      
+      Ad = jnp.eye(self.dim_x) + Ac*self.dt
       
       Bc = np.array([[0, 0],
                       [0, 0],
                       [1, 0],
-                      [0, 0],
                       [0, 1]])
       
-      Ad = jnp.eye(self.dim_x) + Ac*self.dt + 0.5*Ac@Ac*self.dt*self.dt
       Bd = self.dt * Bc
 
       return Ad, Bd

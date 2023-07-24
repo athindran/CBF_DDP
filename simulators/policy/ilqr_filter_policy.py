@@ -7,7 +7,7 @@ from jax import numpy as jnp
 import copy
 import numpy as np
 
-#from .ilqr_reachability_policy import iLQRReachability
+from .ilqr_reachability_policy import iLQRReachability
 from .ilqr_reachavoid_policy import iLQRReachAvoid
 from .ilqr_policy import iLQR
 from .solver_utils import barrier_filter_linear, barrier_filter_quadratic, bicycle_linear_task_policy
@@ -52,6 +52,12 @@ class iLQRSafetyFilter(iLQR):
       self.solver_0 = iLQRReachAvoid(self.id, self.config, self.rollout_dyn_0, self.cost)
       self.solver_1 = iLQRReachAvoid(self.id, self.config, self.rollout_dyn_1, self.cost)
       self.solver_2 = iLQRReachAvoid(self.id, self.config, self.rollout_dyn_1, self.cost)
+      self.is_reachavoid = True
+    elif self.config.COST_TYPE=="Reachability":
+      self.solver_0 = iLQRReachability(self.id, self.config, self.rollout_dyn_0, self.cost)
+      self.solver_1 = iLQRReachability(self.id, self.config, self.rollout_dyn_1, self.cost)
+      self.solver_2 = iLQRReachability(self.id, self.config, self.rollout_dyn_1, self.cost)
+      self.is_reachavoid = False
 
   def get_action(
       self, obs: np.ndarray, controls: Optional[np.ndarray] = None,
@@ -118,7 +124,7 @@ class iLQRSafetyFilter(iLQR):
         solver_info_0['num_iters'] = 0
         solver_info_0['deviation'] = np.linalg.norm(control_0 - task_ctrl, ord=1)
         #print("Filtered control safe", control_0)
-        if solver_info_0['is_inside_target']:
+        if self.is_reachavoid and solver_info_0['is_inside_target']:
           # Render the target set controlled invariant
           return stopping_ctrl, solver_info_0
         else:
@@ -235,7 +241,7 @@ class iLQRSafetyFilter(iLQR):
     solver_info_0['reinit_controls'] = solver_info_0['reinit_controls'].at[:, -1].set(self.dyn.ctrl_space[0, 0])    
     solver_info_0['mark_complete_filter'] = True
     solver_info_0['deviation'] = np.linalg.norm(control_0 - task_ctrl)
-    if solver_info_0['is_inside_target']:
+    if self.is_reachavoid and solver_info_0['is_inside_target']:
         # Render the target set controlled invariant
         safety_control = stopping_ctrl
     else:
