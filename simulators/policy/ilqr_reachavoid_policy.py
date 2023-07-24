@@ -17,7 +17,7 @@ class iLQRReachAvoid(iLQR):
       agents_action: Optional[Dict] = None,**kwargs
   ) -> np.ndarray:
     status = 0
-    self.tol = 1e-6
+    self.tol = 1e-4
 
     if controls is None:
       controls = np.zeros((self.dim_u, self.N))
@@ -61,7 +61,7 @@ class iLQRReachAvoid(iLQR):
       #)
 
       fx, fu = self.dyn.get_jacobian(states[:, :-1], controls[:, :-1])
-      V_x, V_xx, k_open_loop, K_closed_loop, _, _ = self.backward_pass(
+      V_x, V_xx, k_open_loop, K_closed_loop, Q_u, Q_uu = self.backward_pass(
           c_x=c_x, c_u=c_u, c_xx=c_xx, c_uu=c_uu, c_ux=c_ux, c_x_t=c_x_t, c_u_t=c_u_t, c_xx_t=c_xx_t, c_uu_t=c_uu_t, c_ux_t=None, fx=fx, fu=fu,
           critical=critical
       )
@@ -69,6 +69,7 @@ class iLQRReachAvoid(iLQR):
       # Choose the best alpha scaling using appropriate line search methods
       alpha_chosen = self.baseline_line_search( states, controls, K_closed_loop, k_open_loop, J)
       #alpha_chosen = self.armijo_line_search( states, controls, K_closed_loop, k_open_loop, critical, J, c_u)
+      #alpha_chosen = self.backtracking_line_search( states, controls, K_closed_loop, k_open_loop, critical, J, c_u, c_uu)
 
       #states, controls, J_new, critical, failure_margins, target_margins, reachavoid_margin, _, _, _, _ = self.forward_pass(states, controls, K_closed_loop, k_open_loop, alpha_chosen)        
       states, controls, J_new, critical, failure_margins, target_margins, reachavoid_margin, c_x_t, c_xx_t, c_u_t, c_uu_t = self.forward_pass(states, controls, K_closed_loop, k_open_loop, alpha_chosen) 
@@ -117,6 +118,41 @@ class iLQRReachAvoid(iLQR):
       return jnp.logical_and( alpha>self.min_alpha, J_new<J )
     
     states, controls, K_closed_loop, k_open_loop, alpha, J, J_new = jax.lax.while_loop(check_terminated, run_forward_pass, (states, controls, K_closed_loop, k_open_loop, alpha, J, J_new))
+
+    return alpha
+
+  @partial(jax.jit, static_argnames='self')
+  def backtracking_line_search( self, states, controls, K_closed_loop, k_open_loop, critical, J, c_u, c_uu, beta=0.7):
+    alpha = 1.0
+    t_star = jnp.where(critical!=0, size=self.N-1)[0][0]
+    
+    @jax.jit
+    def run_forward_pass(args):
+      states, controls, K_closed_loop, k_open_loop, alpha, J, z = args
+      alpha = beta*alpha
+      X, _, J_new, _, _, _, _, _, _, _, _ = self.forward_pass(states, controls, K_closed_loop, k_open_loop, alpha)
+      
+      numerator = J_new - J
+      # Calculate gradient for armijo decrease condition
+      delta_u =  K_closed_loop[:, :, t_star] @ (X[:, t_star]  - states[:, t_star]) + alpha*k_open_loop[:, t_star]
+
+      grad_cost_u = c_u[:, t_star]
+      hess_cost_u = c_uu[:, :, t_star]
+
+      denominator = grad_cost_u @ delta_u + 0.5*delta_u @ hess_cost_u @ delta_u
+
+      z = jnp.abs( numerator/(denominator + 1e-6) )
+
+      return  states, controls, K_closed_loop, k_open_loop, alpha, J, z 
+
+    @jax.jit
+    def check_terminated(args):
+      _, _, _, _, alpha, _, z = args
+      termination_check = jnp.logical_not(jnp.logical_and(z>1e-4, z<10))
+      return jnp.logical_and( alpha>self.min_alpha, termination_check )
+    
+    z = 0
+    states, controls, K_closed_loop, k_open_loop, alpha, J, z = jax.lax.while_loop(check_terminated, run_forward_pass, (states, controls, K_closed_loop, k_open_loop, alpha, J, z))
 
     return alpha
 
@@ -297,7 +333,7 @@ class iLQRReachAvoid(iLQR):
 
     @jax.jit
     def failure_backward_func(args):
-      idx, V_x, V_xx, ks, Ks, V_x_critical, V_xx_critical = args
+      idx, V_x, V_xx, ks, Ks, Q_u, Q_uu = args
 
       #! Q_x, Q_xx are not used if this time step is critical.
       # Q_x = c_x[:, idx] + fx[:, :, idx].T @ V_x
@@ -310,11 +346,11 @@ class iLQRReachAvoid(iLQR):
       Ks = Ks.at[:, :, idx].set(-Q_uu_inv @ Q_ux)
       ks = ks.at[:, idx].set(-Q_uu_inv @ Q_u)
  
-      return c_x[:, idx], c_xx[:, :, idx], ks, Ks, c_x[:, idx], c_xx[:, :, idx]
+      return c_x[:, idx], c_xx[:, :, idx], ks, Ks, Q_u, Q_uu
 
     @jax.jit
     def target_backward_func(args):
-      idx, V_x, V_xx, ks, Ks, V_x_critical, V_xx_critical = args
+      idx, V_x, V_xx, ks, Ks, Q_u, Q_uu = args
 
       #! Q_x, Q_xx are not used if this time step is critical.
       # Q_x = c_x[:, idx] + fx[:, :, idx].T @ V_x
@@ -327,11 +363,11 @@ class iLQRReachAvoid(iLQR):
       Ks = Ks.at[:, :, idx].set(-Q_uu_inv @ Q_ux)
       ks = ks.at[:, idx].set(-Q_uu_inv @ Q_u)
  
-      return c_x_t[:, idx], c_xx_t[:, :, idx], ks, Ks, c_x_t[:, idx], c_xx_t[:, :, idx]
+      return c_x_t[:, idx], c_xx_t[:, :, idx], ks, Ks, Q_u, Q_uu
 
     @jax.jit
     def propagate_backward_func(args):
-      idx, V_x, V_xx, ks, Ks, V_x_critical, V_xx_critical = args
+      idx, V_x, V_xx, ks, Ks, Q_u, Q_uu = args
 
       Q_x = fx[:, :, idx].T @ V_x
       Q_xx = fx[:, :, idx].T @ V_xx @ fx[:, :, idx]
@@ -346,18 +382,18 @@ class iLQRReachAvoid(iLQR):
       V_x = Q_x + Q_ux.T @ ks[:, idx]
       V_xx = Q_xx + Q_ux.T @ Ks[:, :, idx]
 
-      return V_x, V_xx, ks, Ks, V_x_critical, V_xx_critical
+      return V_x, V_xx, ks, Ks, Q_u, Q_uu
 
     @jax.jit
     def backward_pass_looper(i, _carry):
-      V_x, V_xx, ks, Ks, critical, V_x_critical, V_xx_critical = _carry
+      V_x, V_xx, ks, Ks, critical, Q_u, Q_uu = _carry
       idx = self.N - 2 - i
 
-      V_x, V_xx, ks, Ks, V_x_critical, V_xx_critical = jax.lax.switch(
-          critical[idx], [propagate_backward_func, failure_backward_func, target_backward_func], (idx, V_x, V_xx, ks, Ks, V_x_critical, V_xx_critical)
+      V_x, V_xx, ks, Ks, Q_u, Q_uu = jax.lax.switch(
+          critical[idx], [propagate_backward_func, failure_backward_func, target_backward_func], (idx, V_x, V_xx, ks, Ks, Q_u, Q_uu)
       )
 
-      return V_x, V_xx, ks, Ks, critical, V_x_critical, V_xx_critical
+      return V_x, V_xx, ks, Ks, critical, Q_u, Q_uu
 
     @jax.jit
     def failure_final_func(args):
@@ -373,17 +409,17 @@ class iLQRReachAvoid(iLQR):
     Ks = jnp.zeros((self.dim_u, self.dim_x, self.N - 1))
     ks = jnp.zeros((self.dim_u, self.N - 1))
     
-    V_x_critical = jnp.zeros((self.dim_x, ))
-    V_xx_critical = jnp.zeros((self.dim_x, self.dim_x, ))
+    Q_u = jnp.zeros((self.dim_u, ))
+    Q_uu = jnp.zeros((self.dim_u, self.dim_u, ))
 
     reg_mat = self.eps * jnp.eye(self.dim_x)
 
     # If critical is 2 choose target - hacky!!
     V_x, V_xx = jax.lax.cond(critical[self.N -1]==1, failure_final_func, target_final_func, (c_x, c_xx, c_x_t, c_xx_t))
 
-    V_x, V_xx, ks, Ks, _, V_x_critical, V_xx_critical = jax.lax.fori_loop(
-        0, self.N - 1, backward_pass_looper, (V_x, V_xx, ks, Ks, critical, V_x_critical, V_xx_critical)
+    V_x, V_xx, ks, Ks, _, Q_u, Q_uu = jax.lax.fori_loop(
+        0, self.N - 1, backward_pass_looper, (V_x, V_xx, ks, Ks, critical, Q_u, Q_uu)
     )
 
-    return V_x, V_xx, ks, Ks, V_x_critical, V_xx_critical
+    return V_x, V_xx, ks, Ks, Q_u, Q_uu
 
