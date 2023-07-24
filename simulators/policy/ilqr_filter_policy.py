@@ -3,26 +3,21 @@ import time
 
 import jax
 from jax import numpy as jnp
-from jaxlib.xla_extension import DeviceArray
 
 import copy
 import numpy as np
 
-from .base_policy import BasePolicy
 #from .ilqr_reachability_policy import iLQRReachability
 from .ilqr_reachavoid_policy import iLQRReachAvoid
 from .ilqr_policy import iLQR
+from .solver_utils import barrier_filter_linear, barrier_filter_quadratic, bicycle_linear_task_policy
 
 from ..dynamics.base_dynamics import BaseDynamics
 from ..costs.base_margin import BaseMargin
 
-from functools import partial
-
-from .solver_utils import barrier_filter_linear, barrier_filter_quadratic, bicycle_linear_task_policy
-
 class iLQRSafetyFilter(iLQR):
 
-  def __init__( self, id: str, config, dyn: BaseDynamics, cost: BaseMargin, task_cost:BaseMargin, **kwargs ) -> None:
+  def __init__( self, id: str, config, dyn: BaseDynamics, cost: BaseMargin, task_cost:BaseMargin ) -> None:
     super().__init__(id, config, dyn, cost)
     self.config = config
 

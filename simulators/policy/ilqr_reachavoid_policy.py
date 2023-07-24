@@ -4,7 +4,7 @@ import numpy as np
 import jax
 from jax import numpy as jnp
 from jaxlib.xla_extension import DeviceArray
-from jax.experimental import checkify
+#from jax.experimental import checkify
 from functools import partial
 
 from .ilqr_policy import iLQR
@@ -131,7 +131,7 @@ class iLQRReachAvoid(iLQR):
     def run_forward_pass(args):
       states, controls, K_closed_loop, k_open_loop, alpha, J, t_star, J_new, deltat = args
       alpha = beta*alpha
-      X, U, J_new, _, _, _, _, _, _, _, _ = self.forward_pass(states, controls, K_closed_loop, k_open_loop, alpha)
+      X, _, J_new, _, _, _, _, _, _, _, _ = self.forward_pass(states, controls, K_closed_loop, k_open_loop, alpha)
       
       # Calculate gradient for armijo decrease condition
       delta_u =  K_closed_loop[:, :, t_star] @ (X[:, t_star]  - states[:, t_star]) + k_open_loop[:, t_star]
@@ -144,7 +144,7 @@ class iLQRReachAvoid(iLQR):
 
     @jax.jit
     def check_terminated(args):
-      states, controls, K_closed_loop, k_open_loop, alpha, J, t_star, J_new, deltat = args
+      _, _, _, _, alpha, J, _, J_new, deltat = args
       armijo_check = (J_new <=J + 0.5*deltat*alpha )
       return jnp.logical_and( alpha>self.min_alpha, armijo_check )
     
@@ -160,27 +160,27 @@ class iLQRReachAvoid(iLQR):
     # Avoid cost is critical
     @jax.jit
     def failure_func(args):
-      idx, critical, failure_margin, target_margin, reachavoid_margin = args
+      idx, critical, failure_margin, _, _ = args
       critical = critical.at[idx].set(1)
       return critical, failure_margin
 
     # Avoid cost is not critical
     @jax.jit
     def target_propagate_func(args):
-      idx, critical, failure_margin, target_margin, reachavoid_margin = args
+      _, _, _, target_margin, reachavoid_margin = args
       return jax.lax.cond(target_margin > reachavoid_margin, target_func, propagate_func, args)  
 
     # Reach cost is critical
     @jax.jit
     def target_func(args):
-      idx, critical, failure_margin, target_margin, reachavoid_margin = args
+      idx, critical, _, target_margin, _ = args
       critical = critical.at[idx].set(2)
       return critical, target_margin
 
     # Propagating the cost is critical
     @jax.jit
     def propagate_func(args):
-      idx, critical, failure_margin, target_margin, reachavoid_margin = args
+      idx, critical, _, _, reachavoid_margin = args
       critical = critical.at[idx].set(0)
       return critical, reachavoid_margin
 
@@ -354,19 +354,20 @@ class iLQRReachAvoid(iLQR):
       idx = self.N - 2 - i
 
       V_x, V_xx, ks, Ks, V_x_critical, V_xx_critical = jax.lax.switch(
-          critical[idx], [propagate_backward_func, failure_backward_func, target_backward_func], (idx, V_x, V_xx, ks, Ks, V_x_critical, V_xx_critical)
+          critical[idx], [propagate_backward_func, failure_backward_func, target_backward_func], 
+          (idx, V_x, V_xx, ks, Ks, V_x_critical, V_xx_critical)
       )
 
       return V_x, V_xx, ks, Ks, critical, V_x_critical, V_xx_critical
 
     @jax.jit
     def failure_final_func(args):
-      c_x, c_xx, c_x_t, c_xx_t = args
+      c_x, c_xx, _, _ = args
       return c_x[:, self.N - 1], c_xx[:, :, self.N - 1]
 
     @jax.jit
     def target_final_func(args):
-      c_x, c_xx, c_x_t, c_xx_t = args
+      _, _, c_x_t, c_xx_t = args
       return c_x_t[:, self.N - 1], c_xx_t[:, :, self.N - 1]
 
     # Initializes.
@@ -386,4 +387,3 @@ class iLQRReachAvoid(iLQR):
     )
 
     return V_x, V_xx, ks, Ks, V_x_critical, V_xx_critical
-
