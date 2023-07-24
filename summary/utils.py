@@ -381,4 +381,4 @@ def make_yaw_report(prefix="./exps_may/ilqr/bic5D/yaw_testing/", plot_folder="./
         print("Acceleration jerk: ", jerklist[0], " +- ", jerklist[2])
         print("Steer jerk: ", jerklist[1], " +- ", jerklist[3])
         print("Total deviation: ", np.sum(plot_deviations_list[idx]))
-        print("Process time: ", np.mean(timelist), "+-", np.std(timelist))
+        print("Process time: ", np.mean(timelist), " +- ", np.std(timelist))
