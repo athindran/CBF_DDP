@@ -110,7 +110,9 @@ class iLQRReachability(iLQR):
       _, _, _, _, alpha, J, J_new = args
       return jnp.logical_and( alpha>self.min_alpha, J_new<J )
     
-    states, controls, K_closed_loop, k_open_loop, alpha, J, J_new = jax.lax.while_loop(check_terminated, run_forward_pass, (states, controls, K_closed_loop, k_open_loop, alpha, J, J_new))
+    states, controls, K_closed_loop, k_open_loop, alpha, J, J_new = jax.lax.while_loop(check_terminated, run_forward_pass, 
+                                                                                       (states, controls, K_closed_loop, k_open_loop, alpha, 
+                                                                                        J, J_new))
 
     return alpha
 
@@ -123,14 +125,14 @@ class iLQRReachability(iLQR):
     # Avoid cost is critical
     @jax.jit
     def failure_func(args):
-      idx, critical, failure_margin, reachable_margin = args
+      idx, critical, failure_margin, _ = args
       critical = critical.at[idx].set(1)
       return critical, failure_margin
 
     # Propagating the cost is critical
     @jax.jit
     def propagate_func(args):
-      idx, critical, failure_margin, reachable_margin = args
+      idx, critical, _, reachable_margin = args
       critical = critical.at[idx].set(0)
       return critical, reachable_margin
 
@@ -210,7 +212,7 @@ class iLQRReachability(iLQR):
 
     @jax.jit
     def failure_backward_func(args):
-      idx, V_x, V_xx, ks, Ks, V_x_critical, V_xx_critical = args
+      idx, V_x, V_xx, ks, Ks, _, _ = args
 
       #! Q_x, Q_xx are not used if this time step is critical.
       # Q_x = c_x[:, idx] + fx[:, :, idx].T @ V_x
