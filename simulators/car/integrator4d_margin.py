@@ -162,7 +162,7 @@ class Integrator2DConstraintMargin( BaseMargin ):
       _obs_constraint: BaseMargin
       cost = jnp.minimum(cost, _obs_constraint.get_stage_margin(state, ctrl))
 
-    #cost = jnp.minimum(cost, self.vmin_cost.get_stage_margin(state, ctrl))
+    cost = jnp.minimum(cost, self.vmin_cost.get_stage_margin(state, ctrl))
     #cost = jnp.minimum(cost, self.vmin_y_cost.get_stage_margin(state, ctrl))
 
     return cost
