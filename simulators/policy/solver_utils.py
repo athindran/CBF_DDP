@@ -2,7 +2,6 @@ import cvxpy as cp
 from cvxpy.error import SolverError
 import numpy as np
 
-import scipy
 import math
 
 import jax
@@ -12,7 +11,7 @@ from jax import numpy as jnp
 def barrier_filter_linear(grad_x, B0, c):
   B0 = B0[:, :, 0]
   p = grad_x.T @ B0
-  return -c*p/(jnp.dot(p, p))
+  return -c*p/(jnp.dot(p, p)+1e-6)
 
 def barrier_filter_quadratic(P, p, c, initialize): 
     def is_neg_def(x):

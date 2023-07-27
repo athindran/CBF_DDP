@@ -14,6 +14,7 @@ from .footprint.circle import CircleFootprint
 from .policy.base_policy import BasePolicy
 from .policy.ilqr_policy import iLQR
 from .policy.ilqr_filter_policy import iLQRSafetyFilter
+from .policy.ilqr_kernel_filter_policy import iLQRKernelSafetyFilter
 from .policy.ilqr_reachavoid_policy import iLQRReachAvoid
 
 class Agent:
@@ -135,6 +136,10 @@ class Agent:
       )
     elif policy_type == "iLQRSafetyFilter":
       self.policy = iLQRSafetyFilter(
+          self.id, config, self.dyn, cost, **kwargs
+      )
+    elif policy_type == "ILQRKernelSafetyFilter":
+      self.policy = iLQRKernelSafetyFilter(
           self.id, config, self.dyn, cost, **kwargs
       )
     else:
