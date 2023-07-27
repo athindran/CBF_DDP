@@ -103,6 +103,13 @@ class iLQRSafetyFilter(iLQR):
     solver_info_0['marginopt_next'] = solver_info_1['marginopt']
     solver_info_0['is_inside_target_next'] = solver_info_1['is_inside_target']
 
+    solver_info_0['input_0'] = np.array( initial_state )
+    solver_info_0['input_1'] = np.array( state_imaginary )
+    solver_info_0['target_00'] = np.array( solver_info_0['grad_x'] )
+    solver_info_0['target_01'] = np.array( solver_info_0['Vopt'] )
+    solver_info_0['target_10'] = np.array( solver_info_1['grad_x'] )
+    solver_info_0['target_11'] = np.array( solver_info_1['Vopt'] )
+
     if(self.filter_type=="LR"):
       solver_info_0['barrier_filter_steps'] = self.barrier_filter_steps
       if(solver_info_1['Vopt']<=self.lr_threshold):

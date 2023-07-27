@@ -233,6 +233,7 @@ class BaseSingleEnv(BaseEnv):
       solver_iters_history.append(solver_info['num_iters'])
       deviation_history.append(solver_info['deviation'])
 
+      advanced_animate = False
       if advanced_animate:
         # We plot the safety plan where we enter the target set, then decelerate and stop to remain safe for infinite time for an infeasible task plan
         reachavoid_plan = solver_info['states']
@@ -260,7 +261,8 @@ class BaseSingleEnv(BaseEnv):
 
       if rollout_step_callback is not None:
         rollout_step_callback(
-            self, state_history, action_history, plan_history, step_history, safety_plan=safety_plan
+            self, state_history, action_history, plan_history, step_history, 
+            safety_plan=safety_plan
         )
 
       # Checks termination criterion.
