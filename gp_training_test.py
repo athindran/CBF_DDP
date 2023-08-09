@@ -114,7 +114,7 @@ def main(config_file, plot_tag, road_boundary, is_task_ilqr):
   def rollout_episode_callback(
       env, state_history, action_history, plan_history, step_history, *args, **kwargs
   ):
-    plot_run_summary(dyn_id, env, state_history, action_history, config_solver, fig_folder, **kwargs)
+    plot_run_summary(dyn_id, env, state_history, action_history, config_solver, config_agent, fig_folder, **kwargs)
     save_dict = {'states': state_history, 'actions': action_history, "values": kwargs["value_history"], "process_times": kwargs["process_time_history"]
                  , "barrier_indices": kwargs["barrier_filter_indices"], "complete_indices": kwargs["complete_filter_indices"], 'deviation_history': kwargs['deviation_history']}
     np.save(os.path.join(fig_folder, "save_data.npy"), save_dict)
@@ -169,7 +169,7 @@ def main(config_file, plot_tag, road_boundary, is_task_ilqr):
         cost = BicycleReachAvoid5DMargin(config_current_cost, copy.deepcopy(env.agent.dyn))
         env.cost = cost
         
-        run_first_policy = False
+        run_first_policy = True
         if run_first_policy:
           env.agent.init_policy(
             policy_type=policy_type, config=config_solver, cost=cost, task_cost=task_cost
@@ -222,7 +222,7 @@ def main(config_file, plot_tag, road_boundary, is_task_ilqr):
 
           pickle.dump(training_data, open('training_data.gp', 'wb'))
         
-        training_data = pickle.load(open('training_data.gp', 'rb'))
+        #training_data = pickle.load(open('training_data.gp', 'rb'))
         filtering_model = SafetyFilteringModel( training_data )
         filtering_model.train_model()
 

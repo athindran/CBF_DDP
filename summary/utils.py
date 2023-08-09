@@ -17,13 +17,15 @@ def find_jerk(controls):
     std_y_jerk = np.std( y_jerk )
     return [mean_x_jerk, mean_y_jerk, std_x_jerk, std_y_jerk]
 
-def plot_run_summary(dyn_id, env, state_history, action_history, config_solver, fig_folder="./", **kwargs):
+def plot_run_summary(dyn_id, env, state_history, action_history, config_solver, config_agent, fig_folder="./", **kwargs):
     c_obs = 'k'
     c_ego = 'c'
     
     fig, axes = plt.subplots(
         2, 1, figsize=(config_solver.FIG_SIZE_X, 2*config_solver.FIG_SIZE_Y)
     )
+    
+    action_space = np.array(config_agent.ACTION_RANGE, dtype=np.float32)
 
     for ax in axes:
       # track, obstacles, footprint
@@ -45,6 +47,9 @@ def plot_run_summary(dyn_id, env, state_history, action_history, config_solver, 
     )
     cbar = fig.colorbar(sc, ax=ax)
     cbar.set_label(r"velocity [$m/s$]", size=20)
+    ax.set_xticks(ticks=[0, env.visual_extent[1]], labels=[0, env.visual_extent[1]], fontsize=8)
+    ax.set_yticks(ticks=[env.visual_extent[2], env.visual_extent[3]], labels=[env.visual_extent[2], env.visual_extent[3]], fontsize=8)
+
 
     ax = axes[1]
     sc = ax.scatter(
@@ -54,12 +59,14 @@ def plot_run_summary(dyn_id, env, state_history, action_history, config_solver, 
     cbar = fig.colorbar(sc, ax=ax)
     cbar.set_label(r"second ctrl", size=20)
     fig.tight_layout()
+    ax.set_xticks(ticks=[0, env.visual_extent[1]], labels=[0, env.visual_extent[1]], fontsize=8)
+    ax.set_yticks(ticks=[env.visual_extent[2], env.visual_extent[3]], labels=[env.visual_extent[2], env.visual_extent[3]], fontsize=8)
     fig.savefig(os.path.join(fig_folder, "final.png"), dpi=200)
     plt.close('all')
     
     if dyn_id=="Bicycle5D":
       fig, axes = plt.subplots(
-        1, 3, figsize=(16.0, 2.5)
+        1, 3, figsize=(16.0, 3.5)
       )
       ax = axes[0]
       ax.plot(kwargs["value_history"])
@@ -69,12 +76,16 @@ def plot_run_summary(dyn_id, env, state_history, action_history, config_solver, 
       ax = axes[1]
       ax.plot(ctrls[0, :])
       ax.set_xlabel("Timestep")
-      ax.set_ylabel("Acceleration control 1")
+      ax.set_ylabel("Acceleration control")
+      ax.set_xticks(ticks=[0, ctrls.shape[1]], labels=[0, ctrls.shape[1]], fontsize=8)
+      ax.set_yticks(ticks=[action_space[0, 0], action_space[0, 1]], labels=[action_space[0, 0], action_space[0, 1]], fontsize=8)
 
       ax = axes[2]
       ax.plot(ctrls[1, :])
       ax.set_xlabel("Timestep")
-      ax.set_ylabel("Steering control 1")
+      ax.set_ylabel("Steering control")
+      ax.set_xticks(ticks=[0, ctrls.shape[1]], labels=[0, ctrls.shape[1]], fontsize=8)
+      ax.set_yticks(ticks=[action_space[1, 0], action_space[1, 1]], labels=[action_space[1, 0], action_space[1, 1]], fontsize=8)
 
       fig.savefig(os.path.join(fig_folder, "auxiliary_controls.png"), dpi=200)
 
