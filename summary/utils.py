@@ -17,7 +17,7 @@ def find_jerk(controls):
     std_y_jerk = np.std( y_jerk )
     return [mean_x_jerk, mean_y_jerk, std_x_jerk, std_y_jerk]
 
-def plot_run_summary(dyn_id, env, state_history, action_history, config_solver, fig_folder="./", **kwargs):
+def plot_run_summary(dyn_id, env, state_history, action_history, config_solver, config_agent, fig_folder="./", **kwargs):
     c_obs = 'k'
     c_ego = 'c'
     
@@ -57,24 +57,31 @@ def plot_run_summary(dyn_id, env, state_history, action_history, config_solver, 
     fig.savefig(os.path.join(fig_folder, "final.png"), dpi=200)
     plt.close('all')
     
+    action_space = np.array(config_agent.ACTION_RANGE, dtype=np.float32)
+
     if dyn_id=="Bicycle5D":
       fig, axes = plt.subplots(
-        1, 3, figsize=(16.0, 2.5)
+        1, 3, figsize=(16.0, 3.4)
       )
       ax = axes[0]
       ax.plot(kwargs["value_history"])
       ax.set_xlabel("Timestep")
       ax.set_ylabel("Receding Value function")
-    
+      ax.set_xticks(ticks=[0, ctrls.shape[1]], labels=[0, ctrls.shape[1]], fontsize=8)
+
       ax = axes[1]
       ax.plot(ctrls[0, :])
       ax.set_xlabel("Timestep")
-      ax.set_ylabel("Acceleration control 1")
+      ax.set_ylabel("Acceleration control")
+      ax.set_xticks(ticks=[0, ctrls.shape[1]], labels=[0, ctrls.shape[1]], fontsize=8)
+      ax.set_yticks(ticks=[action_space[0, 0], action_space[0, 1]], labels=[action_space[0, 0], action_space[0, 1]], fontsize=8)
 
       ax = axes[2]
       ax.plot(ctrls[1, :])
       ax.set_xlabel("Timestep")
-      ax.set_ylabel("Steering control 1")
+      ax.set_ylabel("Steering control")
+      ax.set_xticks(ticks=[0, ctrls.shape[1]], labels=[0, ctrls.shape[1]], fontsize=8)
+      ax.set_yticks(ticks=[action_space[1, 0], action_space[1, 1]], labels=[action_space[1, 0], action_space[1, 1]], fontsize=8)
 
       fig.savefig(os.path.join(fig_folder, "auxiliary_controls.png"), dpi=200)
 
@@ -148,7 +155,11 @@ def make_animation_plots(env, state_history, solver_info, safety_plan, config_so
     sc = ax.scatter(
         states[0, :-1], states[1, :-1], s=24, c=c_trace, marker='o'
     )
-    ax.legend(fontsize=6, loc='upper left', bbox_to_anchor=(-0.05, 1.14), fancybox=True)    
+    ax.legend(fontsize=8, loc='upper left', bbox_to_anchor=(0.05, 1.18), fancybox=False)
+    
+    ax.set_xticks(ticks=[0, env.visual_extent[1]], labels=[0, env.visual_extent[1]], fontsize=8)
+    ax.set_yticks(ticks=[env.visual_extent[2], env.visual_extent[3]], labels=[env.visual_extent[2], env.visual_extent[3]], fontsize=8)
+    
     fig.savefig(
         os.path.join(fig_prog_folder,
                      str(states.shape[1] - 1) + ".png"), dpi=200
@@ -162,7 +173,7 @@ def make_yaw_report(prefix="./exps_may/ilqr/bic5D/yaw_testing/", plot_folder="./
     matplotlib.rc('xtick', labelsize=10) 
     matplotlib.rc('ytick', labelsize=10) 
 
-    hide_label = True
+    hide_label = False
 
     legend_fontsize = 8
     road_bounds = [road_boundary]
@@ -353,7 +364,7 @@ def make_yaw_report(prefix="./exps_may/ilqr/bic5D/yaw_testing/", plot_folder="./
                 axes[0].set_yticklabels([])
 
             if not hide_label:
-                #axes[1].set_xlabel('Time index', fontsize=legend_fontsize)
+                axes[1].set_xlabel('Time index', fontsize=legend_fontsize)
                 axes[1].set_ylabel('Steer control', fontsize=legend_fontsize)
             #axes[1].grid(True)
             axes[1].set_xticks(ticks=[0, maxsteps], labels=[0, maxsteps], fontsize=legend_fontsize)
