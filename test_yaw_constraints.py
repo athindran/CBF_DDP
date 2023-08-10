@@ -9,7 +9,6 @@ import imageio
 import argparse
 from shutil import copyfile
 import jax
-#print(jax.devices())
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = " "
 
@@ -77,8 +76,6 @@ def main(config_file, plot_tag, road_boundary, is_task_ilqr):
   )
   max_iter_receding = config_solver.MAX_ITER_RECEDING
 
-  # endregion
-
   # region: Runs iLQR
   # Warms up jit
   env.agent.policy.get_action(obs=x_cur, state=x_cur, warmup=True)
@@ -91,7 +88,8 @@ def main(config_file, plot_tag, road_boundary, is_task_ilqr):
   ):
     solver_info = plan_history[-1]
     states = np.array(state_history).T  # last one is the next state.
-    make_animation_plots(env, state_history, solver_info, kwargs['safety_plan'], config_solver, fig_prog_folder)
+    make_animation_plots(env, state_history, solver_info, kwargs['safety_plan'], config_solver, 
+                         fig_prog_folder)
 
     if config_solver.FILTER_TYPE == "none":
       print(
@@ -138,9 +136,13 @@ def main(config_file, plot_tag, road_boundary, is_task_ilqr):
         print("Filter type", filter_type)
         config_solver.FILTER_TYPE= filter_type
         if yaw_constraint is not None:
-          current_out_folder = os.path.join(out_folder, "road_boundary=" + str(road_boundary)+", yaw=" + str(round(yaw_constraint, 2)))
+          current_out_folder = os.path.join(out_folder, "road_boundary=" + str(road_boundary)+
+                                            ", yaw=" + 
+                                            str(round(yaw_constraint, 2)))
         else:
-          current_out_folder = os.path.join(out_folder, "road_boundary=" + str(road_boundary)+", yaw=" + str(yaw_constraint))
+          current_out_folder = os.path.join(out_folder, "road_boundary=" + str(road_boundary)+
+                                            ", yaw=" + 
+                                            str(yaw_constraint))
         current_out_folder = os.path.join(current_out_folder, filter_type)
         config_solver.OUT_FOLDER = current_out_folder
         fig_folder = os.path.join(current_out_folder, "figure")
