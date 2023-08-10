@@ -61,9 +61,11 @@ class iLQRReachAvoid(iLQR):
       #)
 
       fx, fu = self.dyn.get_jacobian(states[:, :-1], controls[:, :-1])
+      fxx, fuu, fux = self.dyn.get_hessian(states[:, :-1], controls[:, :-1])
+
       V_x, V_xx, k_open_loop, K_closed_loop, _, _ = self.backward_pass(
           c_x=c_x, c_u=c_u, c_xx=c_xx, c_uu=c_uu, c_ux=c_ux, c_x_t=c_x_t, c_u_t=c_u_t, c_xx_t=c_xx_t, c_uu_t=c_uu_t, c_ux_t=None, fx=fx, fu=fu,
-          critical=critical
+          fxx=fxx, fuu=fuu, fux=fux, critical=critical
       )
       
       # Choose the best alpha scaling using appropriate line search methods
@@ -271,7 +273,7 @@ class iLQRReachAvoid(iLQR):
       self, 
       c_x: DeviceArray, c_u: DeviceArray, c_xx: DeviceArray,
       c_uu: DeviceArray, c_ux: DeviceArray, c_x_t: DeviceArray, c_u_t: DeviceArray, c_xx_t: DeviceArray,
-      c_uu_t: DeviceArray, c_ux_t: DeviceArray, fx: DeviceArray, fu: DeviceArray,
+      c_uu_t: DeviceArray, c_ux_t: DeviceArray, fx: DeviceArray, fu: DeviceArray, fxx: DeviceArray, fuu: DeviceArray, fux:DeviceArray,
       critical: DeviceArray
   ) -> Tuple[DeviceArray, DeviceArray, DeviceArray, DeviceArray, DeviceArray, DeviceArray]:
     """
@@ -302,9 +304,11 @@ class iLQRReachAvoid(iLQR):
       #! Q_x, Q_xx are not used if this time step is critical.
       # Q_x = c_x[:, idx] + fx[:, :, idx].T @ V_x
       # Q_xx = c_xx[:, :, idx] + fx[:, :, idx].T @ V_xx @ fx[:, :, idx]
-      Q_ux = c_ux[:, :, idx] + fu[:, :, idx].T @ (V_xx + reg_mat) @ fx[:, :, idx]
+      Q_ux_append = jnp.einsum('i, ijk->jk', V_x, fux[:, :, :, 0])
+      Q_ux = c_ux[:, :, idx] + fu[:, :, idx].T @ (V_xx + reg_mat) @ fx[:, :, idx] + Q_ux_append
       Q_u = c_u[:, idx] + fu[:, :, idx].T @ V_x
-      Q_uu = c_uu[:, :, idx] + fu[:, :, idx].T @ (V_xx + reg_mat) @ fu[:, :, idx]
+      Q_uu_append = jnp.einsum('i, ijk->jk', V_x, fuu[:, :, :, 0])
+      Q_uu = c_uu[:, :, idx] + fu[:, :, idx].T @ (V_xx + reg_mat) @ fu[:, :, idx] + Q_uu_append
 
       Q_uu_inv = jnp.linalg.inv(Q_uu)
       Ks = Ks.at[:, :, idx].set(-Q_uu_inv @ Q_ux)
@@ -319,9 +323,11 @@ class iLQRReachAvoid(iLQR):
       #! Q_x, Q_xx are not used if this time step is critical.
       # Q_x = c_x[:, idx] + fx[:, :, idx].T @ V_x
       # Q_xx = c_xx[:, :, idx] + fx[:, :, idx].T @ V_xx @ fx[:, :, idx]
-      Q_ux = fu[:, :, idx].T @ (V_xx + reg_mat) @ fx[:, :, idx]
+      Q_ux_append = jnp.einsum('i, ijk->jk', V_x, fux[:, :, :, 0])
+      Q_ux = fu[:, :, idx].T @ (V_xx + reg_mat) @ fx[:, :, idx] + Q_ux_append
       Q_u = c_u_t[:, idx] + fu[:, :, idx].T @ V_x
-      Q_uu = c_uu_t[:, :, idx] + fu[:, :, idx].T @ (V_xx + reg_mat) @ fu[:, :, idx]
+      Q_uu_append = jnp.einsum('i, ijk->jk', V_x, fuu[:, :, :, 0])
+      Q_uu = c_uu_t[:, :, idx] + fu[:, :, idx].T @ (V_xx + reg_mat) @ fu[:, :, idx] + Q_uu_append
 
       Q_uu_inv = jnp.linalg.inv(Q_uu)
       Ks = Ks.at[:, :, idx].set(-Q_uu_inv @ Q_ux)
@@ -334,10 +340,14 @@ class iLQRReachAvoid(iLQR):
       idx, V_x, V_xx, ks, Ks, V_x_critical, V_xx_critical = args
 
       Q_x = fx[:, :, idx].T @ V_x
-      Q_xx = fx[:, :, idx].T @ V_xx @ fx[:, :, idx]
-      Q_ux = c_ux[:, :, idx] + fu[:, :, idx].T @ (V_xx + reg_mat) @ fx[:, :, idx]
+      Q_xx_append = jnp.einsum('i, ijk->jk', V_x, fxx[:, :, :, 0])
+      Q_xx = fx[:, :, idx].T @ V_xx @ fx[:, :, idx] + Q_xx_append
+      #V_x = V_x[jnp.newaxis, :]
+      Q_ux_append = jnp.einsum('i, ijk->jk', V_x, fux[:, :, :, 0])
+      Q_ux = c_ux[:, :, idx] + fu[:, :, idx].T @ (V_xx + reg_mat) @ fx[:, :, idx] + Q_ux_append
       Q_u = c_u[:, idx] + fu[:, :, idx].T @ V_x
-      Q_uu = c_uu[:, :, idx] + fu[:, :, idx].T @ (V_xx + reg_mat) @ fu[:, :, idx]
+      Q_uu_append = jnp.einsum('i, ijk->jk', V_x, fuu[:, :, :, 0])
+      Q_uu = c_uu[:, :, idx] + fu[:, :, idx].T @ (V_xx + reg_mat) @ fu[:, :, idx] + Q_uu_append
 
       Q_uu_inv = jnp.linalg.inv(Q_uu)
       Ks = Ks.at[:, :, idx].set(-Q_uu_inv @ Q_ux)
