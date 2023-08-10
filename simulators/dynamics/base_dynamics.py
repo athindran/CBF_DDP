@@ -79,3 +79,29 @@ class BaseDynamics(ABC):
     _jac = jax.jacfwd(self._integrate_forward, argnums=[0, 1])
     jac = jax.jit(jax.vmap(_jac, in_axes=(1, 1), out_axes=(2, 2)))
     return jac(nominal_states, nominal_controls)
+  
+  @partial(jax.jit, static_argnames='self')
+  def get_hessian(
+      self, nominal_states: DeviceArray, nominal_controls: DeviceArray
+  ) -> Tuple[DeviceArray, DeviceArray]:
+    """
+    Returns the linearized 'A' and 'B' matrix of the ego vehicle around
+    nominal states and controls.
+    Args:
+        nominal_states (DeviceArray): states along the nominal trajectory.
+        nominal_controls (DeviceArray): controls along the trajectory.
+
+    Returns:
+        DeviceArray: the Hessian of the dynamics w.r.t. the state.
+        DeviceArray: the Hessian of the dynamics w.r.t. the control.
+    """
+    _jac_xx = jax.jacrev( jax.jacfwd(self._integrate_forward, argnums=0), argnums=0)
+    jac_xx = jax.jit(jax.vmap(_jac_xx, in_axes=(1), out_axes=3))
+
+    _jac_uu = jax.jacrev( jax.jacfwd(self._integrate_forward, argnums=1), argnums=1)
+    jac_uu = jax.jit(jax.vmap(_jac_uu, in_axes=(1), out_axes=3))
+
+    _jac_ux = jax.jacrev( jax.jacfwd(self._integrate_forward, argnums=1), argnums=0)
+    jac_ux = jax.jit(jax.vmap(_jac_ux, in_axes=(1), out_axes=3))
+
+    return jac_xx(nominal_states, nominal_controls), jac_uu(nominal_states, nominal_controls), jac_ux(nominal_states, nominal_controls)
