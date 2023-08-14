@@ -19,7 +19,7 @@ class UpperHalfMargin(BaseMargin):
 
   @partial(jax.jit, static_argnames='self')
   def get_stage_margin(
-      self, state: DeviceArray, ctrl: DeviceArray
+      self, state: DeviceArray, ctrl: DeviceArray, dist: DeviceArray
   ) -> DeviceArray:
     c = self.value - state[self.dim]
     c = c - self.buffer
@@ -27,9 +27,9 @@ class UpperHalfMargin(BaseMargin):
   
   @partial(jax.jit, static_argnames='self')
   def get_target_stage_margin(
-      self, state: DeviceArray, ctrl: DeviceArray
+      self, state: DeviceArray, ctrl: DeviceArray, dist: DeviceArray
   ) -> DeviceArray:
-    return self.get_stage_margin(state, ctrl)
+    return self.get_stage_margin(state, ctrl, dist)
 
 
 class LowerHalfMargin(BaseMargin):
@@ -44,7 +44,7 @@ class LowerHalfMargin(BaseMargin):
 
   @partial(jax.jit, static_argnames='self')
   def get_stage_margin(
-      self, state: DeviceArray, ctrl: DeviceArray
+      self, state: DeviceArray, ctrl: DeviceArray, dist: DeviceArray
   ) -> DeviceArray:
     c = state[self.dim] - self.value
     c = c - self.buffer
@@ -52,6 +52,6 @@ class LowerHalfMargin(BaseMargin):
   
   @partial(jax.jit, static_argnames='self')
   def get_target_stage_margin(
-      self, state: DeviceArray, ctrl: DeviceArray
+      self, state: DeviceArray, ctrl: DeviceArray, dist: DeviceArray
   ) -> DeviceArray:
-    return self.get_stage_margin(state, ctrl)
+    return self.get_stage_margin(state, ctrl, dist)

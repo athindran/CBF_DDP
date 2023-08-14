@@ -7,7 +7,7 @@ import jax
 
 from ..costs.base_margin import BaseMargin, SoftBarrierEnvelope
 from ..costs.obs_margin import CircleObsMargin
-from ..costs.quadratic_penalty import QuadraticControlCost
+from ..costs.quadratic_penalty import QuadraticControlCost, QuadraticDisturbanceCost
 from ..costs.half_space_margin import LowerHalfMargin, UpperHalfMargin
 
 class Bicycle5DCost(BaseMargin):
@@ -437,20 +437,24 @@ class BicycleReachAvoid5DMargin(BaseMargin):
   def __init__(self, config, plan_dyn):
     super().__init__()
     # Removing the square
-    self.constraint = Bicycle5DConstraintMargin(config, plan_dyn)
+    self.constraint = Bicycle5DBasicConstraintMargin(config, plan_dyn)
     if plan_dyn.dim_u==2:
         R = jnp.array([[config.W_ACCEL, 0.0], [0.0, config.W_OMEGA]])
     elif plan_dyn.dim_u==3:
         R = jnp.array([[config.W_ACCEL, 0.0, 0.0], [0.0, config.W_OMEGA, 0.0], [0.0, 0.0, config.W_OMEGA]])
     elif plan_dyn.dim_u==4:
         R = jnp.array([[config.W_ACCEL, 0.0, 0.0, 0.0], [0.0, config.W_ACCEL, 0.0, 0.0], [0.0, 0.0, config.W_OMEGA, 0.0], [0.0, 0.0, 0.0, config.W_OMEGA]])
+    
+    Rd = jnp.array([[config.D_X, 0.0], [0.0, config.D_Y]])
     self.ctrl_cost = QuadraticControlCost(R=R, r=jnp.zeros(plan_dyn.dim_u))
+    self.dist_cost = QuadraticDisturbanceCost(R=Rd, r=jnp.zeros(plan_dyn.dim_d))
     self.constraint.ctrl_cost = QuadraticControlCost(R=R, r=jnp.zeros(plan_dyn.dim_u))
+    self.constraint.dist_cost = self.dist_cost
     self.N = config.N
 
   @partial(jax.jit, static_argnames='self')
   def get_stage_margin(
-      self, state: DeviceArray, ctrl: DeviceArray
+      self, state: DeviceArray, ctrl: DeviceArray, dist: DeviceArray
   ) -> DeviceArray:
     """
 
@@ -462,14 +466,16 @@ class BicycleReachAvoid5DMargin(BaseMargin):
         DeviceArray: scalar.
     """
     state_cost = self.constraint.get_stage_margin(
-        state, ctrl
+        state, ctrl, dist
     )
-    ctrl_cost = self.ctrl_cost.get_stage_margin(state, ctrl)
-    return state_cost + ctrl_cost
+    ctrl_cost = self.ctrl_cost.get_stage_margin(state, ctrl, dist)
+    dist_cost = self.dist_cost.get_stage_margin(state, ctrl, dist)
+
+    return state_cost + ctrl_cost - dist_cost
 
   @partial(jax.jit, static_argnames='self')
   def get_target_stage_margin(
-      self, state: DeviceArray, ctrl: DeviceArray
+      self, state: DeviceArray, ctrl: DeviceArray, dist: DeviceArray
   ) -> DeviceArray:
     """
 
@@ -481,17 +487,19 @@ class BicycleReachAvoid5DMargin(BaseMargin):
         DeviceArray: scalar.
     """
     target_cost = self.constraint.get_target_stage_margin(
-        state, ctrl
+        state, ctrl, dist
     )
-    ctrl_cost = self.ctrl_cost.get_stage_margin(state, ctrl)
+    ctrl_cost = self.ctrl_cost.get_stage_margin(state, ctrl, dist)
+    dist_cost = self.dist_cost.get_stage_margin(state, ctrl, dist)
    
-    return target_cost + ctrl_cost
+    return target_cost + ctrl_cost - dist_cost
   
+  """
   @partial(jax.jit, static_argnames='self')
   def get_target_stage_margin_with_derivative(
-      self, state: DeviceArray, ctrl: DeviceArray
+      self, state: DeviceArray, ctrl: DeviceArray, dist: DeviceArray
   ) -> DeviceArray:
-    """
+    #
 
     Args:
         state (DeviceArray, vector shape)
@@ -499,15 +507,17 @@ class BicycleReachAvoid5DMargin(BaseMargin):
 
     Returns:
         DeviceArray: scalar.
-    """
+    #
     target_cost, c_x_target, c_xx_target = self.constraint.get_target_stage_margin_with_derivatives(
-        state, ctrl
+        state, ctrl, dist
     )
     ctrl_cost = self.ctrl_cost.get_stage_margin(state, ctrl)
+    dist_cost = self.dist_cost.get_stage_margin(state, dist)
     c_u_target = self.ctrl_cost.get_cu(state[:, jnp.newaxis], ctrl[:, jnp.newaxis])[:, -1]
     c_uu_target = self.ctrl_cost.get_cuu(state[:, jnp.newaxis], ctrl[:, jnp.newaxis])[:, :, -1]
    
-    return target_cost + ctrl_cost, c_x_target, c_xx_target, c_u_target, c_uu_target
+    return target_cost + ctrl_cost - dist_cost, c_x_target, c_xx_target, c_u_target, c_uu_target
+  """
 
   #UNUSED FUNCTION   
   @partial(jax.jit, static_argnames='self')
@@ -522,3 +532,80 @@ class BicycleReachAvoid5DMargin(BaseMargin):
     # TODO: critical points version
 
     return (jnp.min(state_costs[1:]) + jnp.sum(ctrl_costs)).astype(float)
+
+class Bicycle5DBasicConstraintMargin( BaseMargin ):
+  def __init__(self, config, plan_dyn):
+    super().__init__()
+    # System parameters.
+    self.ego_radius = config.EGO_RADIUS
+
+    # Racing cost parameters.
+    self.w_accel = config.W_ACCEL
+    self.w_omega = config.W_OMEGA
+    
+    self.obs_spec = config.OBS_SPEC
+    self.target_spec = config.TARGET_SPEC
+    self.obsc_type = config.OBSC_TYPE
+    self.plan_dyn = plan_dyn
+
+    self.dim_x = plan_dyn.dim_x
+    self.dim_u = plan_dyn.dim_u
+
+    self.obs_constraint = []
+    self.target_constraint = []
+    if self.obsc_type=='circle':
+      for circle_spec in self.obs_spec:
+        self.obs_constraint.append(
+          CircleObsMargin(
+              circle_spec=circle_spec, buffer=config.EGO_RADIUS
+          )
+        )
+
+      for target_spec in self.target_spec:
+        self.target_constraint.append(
+          CircleObsMargin(
+              circle_spec=target_spec, buffer=config.EGO_RADIUS
+          ) 
+        )
+
+  @partial(jax.jit, static_argnames='self')
+  def get_stage_margin(
+      self, state: DeviceArray, ctrl: DeviceArray, dist:DeviceArray
+  ) -> DeviceArray:
+    
+    """
+    Args:
+        state (DeviceArray, vector shape)
+        ctrl (DeviceArray, vector shape)
+
+    Returns:
+        DeviceArray: scalar.
+    """
+    cost = jnp.inf
+    
+    for _obs_constraint in self.obs_constraint:
+      _obs_constraint: BaseMargin
+      cost = jnp.minimum(cost, _obs_constraint.get_stage_margin(state, ctrl, dist))
+
+    return cost
+  
+  @partial(jax.jit, static_argnames='self')
+  def get_target_stage_margin(
+      self, state: DeviceArray, ctrl: DeviceArray, dist:DeviceArray
+  ) -> DeviceArray:
+    
+    """
+    Args:
+        state (DeviceArray, vector shape)
+        ctrl (DeviceArray, vector shape)
+
+    Returns:
+        DeviceArray: scalar.
+    """
+    cost = jnp.inf
+    
+    for _target_constraint in self.target_constraint:
+      _target_constraint: BaseMargin
+      cost = -1*_target_constraint.get_stage_margin(state, ctrl, dist)
+
+    return cost

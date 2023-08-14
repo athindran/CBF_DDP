@@ -4,6 +4,7 @@ import numpy as np
 
 # Dynamics.
 from .dynamics.bicycle5d import Bicycle5D
+from .dynamics.bicycle5d_game import Bicycle5DGame
 
 from .costs.base_margin import BaseMargin
 
@@ -15,6 +16,7 @@ from .policy.base_policy import BasePolicy
 from .policy.ilqr_policy import iLQR
 from .policy.ilqr_filter_policy import iLQRSafetyFilter
 from .policy.ilqr_reachavoid_policy import iLQRReachAvoid
+from .policy.ilqr_reachavoid_two_player_policy import iLQRReachAvoidGame
 
 class Agent:
   """A basic unit in our environments.
@@ -30,9 +32,11 @@ class Agent:
   agents_policy: Dict[str, BasePolicy]
   agents_order: Optional[List]
 
-  def __init__(self, config, action_space: np.ndarray, env=None) -> None:
+  def __init__(self, config, action_space: np.ndarray, disturbance_space = None, env=None) -> None:
     if config.DYN == "Bicycle5D":
       self.dyn = Bicycle5D(config, action_space)
+    elif config.DYN == "Bicycle5DGame":
+      self.dyn = Bicycle5DGame(config, action_space=action_space, disturbance_space=disturbance_space)
     else:
       raise ValueError("Dynamics type not supported!")
 
@@ -51,6 +55,7 @@ class Agent:
     self.ego_observable = None
     self.agents_policy = {}
     self.agents_order = None
+    self.config_agent = config
 
   def integrate_forward(
       self, state: np.ndarray, control: np.ndarray = None
@@ -131,6 +136,10 @@ class Agent:
       self.policy = iLQR(self.id, config, self.dyn, cost, **kwargs)
     elif policy_type == "iLQRReachAvoid":
       self.policy = iLQRReachAvoid(
+          self.id, config, self.dyn, cost, config_agent=self.config_agent, **kwargs
+      )
+    elif policy_type == "iLQRReachAvoidGame":
+      self.policy = iLQRReachAvoidGame(
           self.id, config, self.dyn, cost, **kwargs
       )
     elif policy_type == "iLQRSafetyFilter":

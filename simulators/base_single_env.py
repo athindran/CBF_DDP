@@ -19,12 +19,23 @@ class BaseSingleEnv(BaseEnv):
 
     # Action Space.
     action_space = np.array(config_agent.ACTION_RANGE, dtype=np.float32)
+    disturbance_space = getattr(config_agent, "DISTURBANCE_RANGE", None)
+    
+    if disturbance_space is not None:
+      disturbance_space = np.array(config_agent.DISTURBANCE_RANGE, dtype=np.float32)
+      self.disturbance_dim = disturbance_space.shape[0]
+
     self.action_dim = action_space.shape[0]
     self.action_dim_ctrl = action_space.shape[0]
-    self.agent = Agent(config_agent, action_space)
+
+    self.agent = Agent(config_agent, action_space, disturbance_space)
     self.action_space = spaces.Box(
         low=action_space[:, 0], high=action_space[:, 1]
     )
+    self.disturbance_space = spaces.Box(
+        low=disturbance_space[:, 0], high=disturbance_space[:, 1]
+    )
+
     self.state_dim = self.agent.dyn.dim_x
 
     self.integrate_kwargs = getattr(config_env, "INTEGRATE_KWARGS", {})

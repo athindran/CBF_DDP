@@ -25,6 +25,7 @@ class CarSingle5DEnv(BaseSingleEnv):
     config_constraint.TRACK_WIDTH_LEFT = config_env.TRACK_WIDTH_LEFT
     config_constraint.TRACK_WIDTH_RIGHT = config_env.TRACK_WIDTH_RIGHT
     config_constraint.OBS_SPEC = config_env.OBS_SPEC
+    config_constraint.TARGET_SPEC = config_env.TARGET_SPEC
     config_constraint.OBSC_TYPE = config_env.OBSC_TYPE
     self.obsc_type = config_env.OBSC_TYPE 
     
@@ -47,10 +48,14 @@ class CarSingle5DEnv(BaseSingleEnv):
         self.visual_bounds[1, 0] - y_eps, self.visual_bounds[1, 1] + y_eps
     ])
     self.obs_vertices_list = []
+    self.target_vertices_list = []
 
     if self.obsc_type=='circle':
       for circle_spec in self.cost.constraint.obs_spec:
         self.obs_vertices_list.append(circle_spec)
+
+      for circle_spec in self.cost.constraint.target_spec:
+        self.target_vertices_list.append(circle_spec)
 
     # Initializes.
     self.reset_rej_sampling = getattr(config_env, "RESET_REJ_SAMPLING", True)
@@ -261,9 +266,10 @@ class CarSingle5DEnv(BaseSingleEnv):
           ctrl = jnp.zeros((self.action_dim, 1))
           state_jnp = jnp.array(state[:, np.newaxis])
           cons = self.cost.get_mapped_margin(
-              state_jnp, ctrl
+              state_jnp, ctrl, jnp.zeros((self.disturbance_dim, 1))
           )[0]
-          reset_flag = cons > 0.
+          #reset_flag = cons > 0.
+          reset_flag = False
         else:
           reset_flag = False
     self.state = state.copy()
@@ -346,6 +352,12 @@ class CarSingle5DEnv(BaseSingleEnv):
       for vertices in self.obs_vertices_list:
         obs_circle = plt.Circle([vertices[0], vertices[1]], vertices[2], alpha=0.4, color=c)
         ax.add_patch(obs_circle)
+
+  def render_target(self, ax, c: str = 'r'):
+    if self.cost.constraint.obsc_type=='circle':
+      for vertices in self.target_vertices_list:
+        target_circle = plt.Circle([vertices[0], vertices[1]], vertices[2], alpha=0.4, color=c)
+        ax.add_patch(target_circle)
 
 
   def render_state_cost_map(

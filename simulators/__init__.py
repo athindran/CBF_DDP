@@ -17,6 +17,7 @@ from .costs.base_margin import SoftBarrierEnvelope, BaseMargin
 from .costs.obs_margin import BoxObsMargin
 
 from .policy.base_policy import BasePolicy
+from .plotting.state_plotter import StatePlotter
 
 from .dynamics.bicycle5d import Bicycle5D
 #from .pendulum.pendulum import Pendulum
