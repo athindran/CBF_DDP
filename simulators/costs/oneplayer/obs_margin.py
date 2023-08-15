@@ -22,7 +22,7 @@ class CircleObsMargin(BaseMargin):
 
   @partial(jax.jit, static_argnames='self')
   def get_stage_margin(
-      self, state: DeviceArray, ctrl: DeviceArray, dist: DeviceArray
+      self, state: DeviceArray, ctrl: DeviceArray
   ) -> DeviceArray:
     # signed distance to the box, positive inside
     circ_distance = jnp.sqrt( (state[0]-self.center[0])**2 +  (state[1]-self.center[1])**2) - self.radius
@@ -30,9 +30,9 @@ class CircleObsMargin(BaseMargin):
   
   @partial(jax.jit, static_argnames='self')
   def get_target_stage_margin(
-      self, state: DeviceArray, ctrl: DeviceArray, dist: DeviceArray
+      self, state: DeviceArray, ctrl: DeviceArray
   ) -> DeviceArray:
-    return self.get_stage_margin(state, ctrl, dist)
+    return self.get_stage_margin(state, ctrl)
 
 class BoxObsMargin(BaseMargin):
   """
@@ -51,7 +51,7 @@ class BoxObsMargin(BaseMargin):
 
   @partial(jax.jit, static_argnames='self')
   def get_stage_margin(
-      self, state: DeviceArray, ctrl: DeviceArray, dist: DeviceArray
+      self, state: DeviceArray, ctrl: DeviceArray
   ) -> DeviceArray:
     # signed distance to the box, positive inside
     sgn_dist = jnp.minimum(state[0] - self.lb[0], self.ub[0] - state[0])
@@ -62,6 +62,6 @@ class BoxObsMargin(BaseMargin):
   
   @partial(jax.jit, static_argnames='self')
   def get_target_stage_margin(
-      self, state: DeviceArray, ctrl: DeviceArray, dist: DeviceArray
+      self, state: DeviceArray, ctrl: DeviceArray
   ) -> DeviceArray:
-    return self.get_stage_margin(state, ctrl, dist)
+    return self.get_stage_margin(state, ctrl)

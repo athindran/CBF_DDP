@@ -12,7 +12,7 @@ import jax
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = " "
 
-from simulators import(load_config, CarSingle5DEnv, BicycleReachAvoid5DMargin, PrintLogger, Bicycle5DCost, StatePlotter)
+from simulators import(load_config, CarDouble5DEnv, BicycleReachAvoid5DMarginTwo, PrintLogger, StatePlotter)
 from summary.utils import(make_animation_plots, make_yaw_report, plot_run_summary)
 from summary.convergence_plot import plot_cvg_animation
 
@@ -39,7 +39,7 @@ def main(config_file, plot_tag, road_boundary, is_task_ilqr):
   config_env.TRACK_WIDTH_RIGHT = road_boundary
   config_env.TRACK_WIDTH_LEFT = road_boundary
 
-  env = CarSingle5DEnv(config_env, config_agent, config_cost)
+  env = CarDouble5DEnv(config_env, config_agent, config_cost)
   x_cur = np.array(getattr(config_solver, "INIT_STATE", [0., 0., 0.5, 0., 0.]))
   env.reset(x_cur)
 
@@ -53,8 +53,8 @@ def main(config_file, plot_tag, road_boundary, is_task_ilqr):
     if config_solver.FILTER_TYPE == "none":
       policy_type = "iLQRReachAvoidGame"
       #cost = BicycleReachAvoid5DMargin(config_ilqr_cost, copy.deepcopy(env.agent.dyn))
-      cost = BicycleReachAvoid5DMargin(config_ilqr_cost, copy.deepcopy(env.agent.dyn))
-      task_cost = Bicycle5DCost(config_ilqr_cost, copy.deepcopy(env.agent.dyn))
+      cost = BicycleReachAvoid5DMarginTwo(config_ilqr_cost, copy.deepcopy(env.agent.dyn))
+      task_cost = None
       env.cost = cost  #! hacky
 
  

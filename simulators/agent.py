@@ -6,8 +6,6 @@ import numpy as np
 from .dynamics.bicycle5d import Bicycle5D
 from .dynamics.bicycle5d_game import Bicycle5DGame
 
-from .costs.base_margin import BaseMargin
-
 # Footprint.
 from .footprint.circle import CircleFootprint
 
@@ -130,7 +128,7 @@ class Agent:
     return _action, _solver_info
 
   def init_policy(
-      self, policy_type: str, config, cost: Optional[BaseMargin] = None, **kwargs
+      self, policy_type: str, config, cost = None, **kwargs
   ):
     if policy_type == "iLQR":
       self.policy = iLQR(self.id, config, self.dyn, cost, **kwargs)

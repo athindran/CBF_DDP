@@ -21,10 +21,10 @@ class StatePlotter():
         self.env.render_obs(ax=ax, c=c_obs)
         self.env.render_target(ax=ax, c='g')
         ax.set_xlim([0, 1.6])
-        ax.set_ylim([-0.5, 0.5])
+        ax.set_ylim([-0.6, 0.6])
         ax.set_aspect('equal')
         ax.set_xticks(ticks=[0, 1.5], labels=[0, 1.5], fontsize=6)
-        ax.set_yticks(ticks=[-0.5, 0.5], labels=[-0.5, 0.5], fontsize=6)
+        ax.set_yticks(ticks=[-0.6, 0.6], labels=[-0.6, 0.6], fontsize=6)
         ax.set_xlabel('X position', fontsize=6)
         ax.set_ylabel('Y position', fontsize=6)
     

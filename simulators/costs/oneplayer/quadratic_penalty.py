@@ -22,7 +22,7 @@ class QuadraticCost(BaseMargin):
 
   @partial(jax.jit, static_argnames='self')
   def get_stage_margin(
-      self, state: DeviceArray, ctrl: DeviceArray, dist: DeviceArray
+      self, state: DeviceArray, ctrl: DeviceArray
   ) -> DeviceArray:
     Qx = jnp.einsum("i,ni->n", state, self.Q)
     xtQx = jnp.einsum("n,n", state, Qx)
@@ -36,9 +36,9 @@ class QuadraticCost(BaseMargin):
   
   @partial(jax.jit, static_argnames='self')
   def get_target_stage_margin(
-      self, state: DeviceArray, ctrl: DeviceArray, dist: DeviceArray
+      self, state: DeviceArray, ctrl: DeviceArray
   ) -> DeviceArray:
-    return self.get_stage_margin(state, ctrl, dist)
+    return self.get_stage_margin(state, ctrl)
 
 
 class QuadraticControlCost(BaseMargin):
@@ -50,7 +50,7 @@ class QuadraticControlCost(BaseMargin):
 
   @partial(jax.jit, static_argnames='self')
   def get_stage_margin(
-      self, state: DeviceArray, ctrl: DeviceArray, dist: DeviceArray
+      self, state: DeviceArray, ctrl: DeviceArray
   ) -> DeviceArray:
     Ru = jnp.einsum("i,mi->m", ctrl, self.R)
     utRu = jnp.einsum("m,m", ctrl, Ru)
@@ -59,29 +59,6 @@ class QuadraticControlCost(BaseMargin):
   
   @partial(jax.jit, static_argnames='self')
   def get_target_stage_margin(
-      self, state: DeviceArray, ctrl: DeviceArray, dist: DeviceArray
+      self, state: DeviceArray, ctrl: DeviceArray
   ) -> DeviceArray:
-    return self.get_stage_margin(state, ctrl, dist)
-
-
-class QuadraticDisturbanceCost(BaseMargin):
-
-  def __init__(self, R: np.ndarray, r: np.ndarray):
-    super().__init__()
-    self.R = jnp.array(R)  # (m, m)
-    self.r = jnp.array(r)  # (m,)
-
-  @partial(jax.jit, static_argnames='self')
-  def get_stage_margin(
-      self, state: DeviceArray, ctrl: DeviceArray, dist: DeviceArray
-  ) -> DeviceArray:
-    Ru = jnp.einsum("i,mi->m", dist, self.R)
-    dtRd = jnp.einsum("m,m", dist, Ru)
-    rtd= jnp.einsum("m,m", dist, self.r)
-    return -0.5*dtRd - rtd
-  
-  @partial(jax.jit, static_argnames='self')
-  def get_target_stage_margin(
-      self, state: DeviceArray, ctrl: DeviceArray, dist: DeviceArray
-  ) -> DeviceArray:
-    return self.get_stage_margin(state, ctrl, dist)
+    return self.get_stage_margin(state, ctrl)

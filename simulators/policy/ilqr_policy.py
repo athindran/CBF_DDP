@@ -8,24 +8,22 @@ from jaxlib.xla_extension import DeviceArray
 from functools import partial
 
 from .base_policy import BasePolicy
-from ..dynamics.base_dynamics_game import BaseDynamics
-from ..costs.base_margin import BaseMargin
 
 class iLQR(BasePolicy):
 
   def __init__(
-      self, id: str, config, dyn: BaseDynamics, cost: BaseMargin, **kwargs
+      self, id: str, config, dyn, cost, **kwargs
   ) -> None:
     super().__init__(id, config)
     self.policy_type = "iLQR"
     self.dyn = copy.deepcopy(dyn)
     self.cost = copy.deepcopy(cost)
-    self.plotter = kwargs['plotter']
+    #self.plotter = kwargs['plotter']
 
     # iLQR parameters
     self.dim_x = dyn.dim_x
     self.dim_u = dyn.dim_u
-    self.dim_d = dyn.dim_d
+    self.dim_d = dyn.dim_u
     self.N = config.N
     self.max_iter = config.MAX_ITER
     self.tol = 1e-5  # ILQR update tolerance.

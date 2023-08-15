@@ -10,12 +10,9 @@ from .ilqr_reachavoid_policy import iLQRReachAvoid
 from .ilqr_policy import iLQR
 from .solver_utils import barrier_filter_linear, barrier_filter_quadratic, bicycle_linear_task_policy
 
-from ..dynamics.base_dynamics import BaseDynamics
-from ..costs.base_margin import BaseMargin
-
 class iLQRSafetyFilter(iLQR):
 
-  def __init__( self, id: str, config, dyn: BaseDynamics, cost: BaseMargin, task_cost:BaseMargin ) -> None:
+  def __init__( self, id: str, config, dyn, cost, task_cost ) -> None:
     super().__init__(id, config, dyn, cost)
     self.config = config
 

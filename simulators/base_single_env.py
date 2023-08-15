@@ -32,9 +32,12 @@ class BaseSingleEnv(BaseEnv):
     self.action_space = spaces.Box(
         low=action_space[:, 0], high=action_space[:, 1]
     )
-    self.disturbance_space = spaces.Box(
+
+    self.disturbance_space = None
+    if disturbance_space is not None:
+      self.disturbance_space = spaces.Box(
         low=disturbance_space[:, 0], high=disturbance_space[:, 1]
-    )
+      )
 
     self.state_dim = self.agent.dyn.dim_x
 

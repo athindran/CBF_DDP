@@ -12,7 +12,7 @@ import jax
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = " "
 
-from simulators import(load_config, CarSingle5DEnv, BicycleReachAvoid5DMargin, PrintLogger, Bicycle5DCost)
+from simulators import(load_config, CarSingle5DEnv, BicycleReachAvoid5DMarginOne, PrintLogger, Bicycle5DCost)
 from summary.utils import(make_animation_plots, make_yaw_report, plot_run_summary)
 
 jax.config.update('jax_platform_name', 'cpu')
@@ -51,23 +51,23 @@ def main(config_file, plot_tag, road_boundary, is_task_ilqr):
   if config_cost.COST_TYPE == "Reachavoid":
     if config_solver.FILTER_TYPE == "none":
       policy_type = "iLQRReachAvoid"
-      cost = BicycleReachAvoid5DMargin(config_ilqr_cost, copy.deepcopy(env.agent.dyn))
+      cost = BicycleReachAvoid5DMarginOne(config_ilqr_cost, copy.deepcopy(env.agent.dyn))
       task_cost = Bicycle5DCost(config_ilqr_cost, copy.deepcopy(env.agent.dyn))
       env.cost = cost  #! hacky
     else:
       policy_type = "iLQRSafetyFilter"
-      cost = BicycleReachAvoid5DMargin(config_ilqr_cost, copy.deepcopy(env.agent.dyn))
+      cost = BicycleReachAvoid5DMarginOne(config_ilqr_cost, copy.deepcopy(env.agent.dyn))
       task_cost = Bicycle5DCost(config_ilqr_cost, copy.deepcopy(env.agent.dyn))
       env.cost = cost  #! hacky
   #Not supported    
   elif config_cost.COST_TYPE == "Reachability":
     if config_solver.FILTER_TYPE == "none":
       policy_type = "iLQRReachability"
-      cost = BicycleReachAvoid5DMargin(config_ilqr_cost, copy.deepcopy(env.agent.dyn))
+      cost = BicycleReachAvoid5DMarginOne(config_ilqr_cost, copy.deepcopy(env.agent.dyn))
       env.cost = cost  #! hacky
     else:
       policy_type = "iLQRSafetyFilter"
-      cost = BicycleReachAvoid5DMargin(config_ilqr_cost, copy.deepcopy(env.agent.dyn))
+      cost = BicycleReachAvoid5DMarginOne(config_ilqr_cost, copy.deepcopy(env.agent.dyn))
       task_cost = Bicycle5DCost(config_ilqr_cost, copy.deepcopy(env.agent.dyn))
       env.cost = cost
 
@@ -164,7 +164,7 @@ def main(config_file, plot_tag, road_boundary, is_task_ilqr):
         config_current_cost.TRACK_WIDTH_LEFT = road_boundary
         env.visual_extent[2] = -road_boundary
         env.visual_extent[3] = road_boundary
-        cost = BicycleReachAvoid5DMargin(config_current_cost, copy.deepcopy(env.agent.dyn))
+        cost = BicycleReachAvoid5DMarginOne(config_current_cost, copy.deepcopy(env.agent.dyn))
         env.cost = cost
         env.agent.init_policy(
           policy_type=policy_type, config=config_solver, cost=cost, task_cost=task_cost
