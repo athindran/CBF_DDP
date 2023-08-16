@@ -18,7 +18,7 @@ class iLQR(BasePolicy):
     self.policy_type = "iLQR"
     self.dyn = copy.deepcopy(dyn)
     self.cost = copy.deepcopy(cost)
-    #self.plotter = kwargs['plotter']
+    self.plotter = kwargs['plotter']
 
     # iLQR parameters
     self.dim_x = dyn.dim_x

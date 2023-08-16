@@ -51,8 +51,8 @@ cost:
   # SAFETY COST PARAM
   W_ACCEL: 0.0001
   W_OMEGA: 0.0001
-  D_X: 0.00000001
-  D_Y: 0.00000001
+  D_X: 0.000001
+  D_Y: 0.000001
   YAW_MIN: -1.57
   YAW_MAX: 1.57
 
@@ -63,10 +63,10 @@ agent:
   EGO_RADIUS: 0.0
   ACTION_RANGE:
     - [-0.5, 0.5]
-    - [-1.0, 1.0]
+    - [-1.5, 1.5]
   DISTURBANCE_RANGE:
-    - [-0.001, 0.001]
-    - [-0.001, 0.001]
+    - [-0.0, 0.0]
+    - [-0.0, 0.0]
   WEIGHT : 2.99  # kg
   # CAR DYNAMICS
   WHEELBASE: 0.2

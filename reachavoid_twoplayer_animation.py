@@ -74,8 +74,8 @@ def main(config_file, plot_tag, road_boundary, is_task_ilqr):
   plot_cvg_animation(env, states)
   print('Converged cost', solver_info['Vopt'])
   #print('Gains', solver_info['Ks1'], solver_info['ks1'])
-  #print('Controls', solver_info['controls'])
-  #print('Disturbances', solver_info['disturbances'])
+  print('Controls', solver_info['controls'])
+  print('Disturbances', solver_info['disturbances'])
   env.report()
 
 if __name__ == "__main__":

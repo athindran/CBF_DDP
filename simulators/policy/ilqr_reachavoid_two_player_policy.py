@@ -50,7 +50,7 @@ class iLQRReachAvoidGame(iLQR):
           "ik,k->i", Ks2[:, :, i], (X[:, i] - nominal_states[:, i])
       )
       d = nominal_disturbances[:, i] + alpha * ks2[:, i] + d_fb
-      #d = jnp.array([0, 0])
+      d = jnp.array([0, 0])
 
       x_nxt, u_clip, d_clip = self.dyn.integrate_forward_jax(X[:, i], u, d)
       X = X.at[:, i + 1].set(x_nxt)
@@ -71,7 +71,7 @@ class iLQRReachAvoidGame(iLQR):
       agents_action: Optional[Dict] = None,**kwargs
   ) -> np.ndarray:
     status = 0
-    self.tol = 1e-4
+    self.tol = 1e-5
 
     if controls is None:
       controls = np.zeros((self.dim_u, self.N))
@@ -415,7 +415,6 @@ class iLQRReachAvoidGame(iLQR):
 
     return future_cost
   """
-  """
   @partial(jax.jit, static_argnames='self')
   def backward_pass(
       self, 
@@ -432,14 +431,14 @@ class iLQRReachAvoidGame(iLQR):
       # Q_x = c_x[:, idx] + fx[:, :, idx].T @ V_x
       # Q_xx = c_xx[:, :, idx] + fx[:, :, idx].T @ V_xx @ fx[:, :, idx]
       Q_uu_11 = c_uu[:, :, idx] + fu[:, :, idx].T @ (V_xx + reg_mat) @ fu[:, :, idx] 
-      Q_uu_22 = c_dd[:, :, idx] + fd[:, :, idx].T @ (-V_xx + reg_mat) @ fd[:, :, idx] 
+      Q_uu_22 = c_dd[:, :, idx] - fd[:, :, idx].T @ (V_xx + reg_mat) @ fd[:, :, idx] 
       Q_uu_12 = fu[:, :, idx].T @ (V_xx + reg_mat) @ fd[:, :, idx]
       Q_uu_21 = -Q_uu_12.T
       Q_uu_1 = jnp.concatenate((Q_uu_11, Q_uu_12), axis=1)
       Q_uu_2 = jnp.concatenate((Q_uu_21, Q_uu_22), axis=1)
       Q_uu = jnp.concatenate( (Q_uu_1, Q_uu_2), axis=0)
       Q_ux_1 = fu[:, :, idx].T @ (V_xx + reg_mat) @ fx[:, :, idx]
-      Q_ux_2 = fd[:, :, idx].T @ (-V_xx + reg_mat) @ fx[:, :, idx]
+      Q_ux_2 = -fd[:, :, idx].T @ (V_xx + reg_mat) @ fx[:, :, idx]
       Q_ux = jnp.concatenate((Q_ux_1, Q_ux_2), axis=0)
 
       Q_uu_inv = jnp.linalg.inv(Q_uu) 
@@ -476,14 +475,14 @@ class iLQRReachAvoidGame(iLQR):
       # Q_x = c_x[:, idx] + fx[:, :, idx].T @ V_x
       # Q_xx = c_xx[:, :, idx] + fx[:, :, idx].T @ V_xx @ fx[:, :, idx]
       Q_uu_11 = c_uu[:, :, idx] + fu[:, :, idx].T @ (V_xx + reg_mat) @ fu[:, :, idx]
-      Q_uu_22 = c_dd[:, :, idx] + fd[:, :, idx].T @ (-V_xx + reg_mat) @ fd[:, :, idx]
+      Q_uu_22 = c_dd[:, :, idx] - fd[:, :, idx].T @ (V_xx + reg_mat) @ fd[:, :, idx]
       Q_uu_12 = fu[:, :, idx].T @ (V_xx + reg_mat) @ fd[:, :, idx]
       Q_uu_21 = -Q_uu_12.T
       Q_uu_1 = jnp.concatenate((Q_uu_11, Q_uu_12), axis=1)
       Q_uu_2 = jnp.concatenate((Q_uu_21, Q_uu_22), axis=1)
       Q_uu = jnp.concatenate( (Q_uu_1, Q_uu_2), axis=0)
       Q_ux_1 = fu[:, :, idx].T @ (V_xx + reg_mat) @ fx[:, :, idx]
-      Q_ux_2 = fd[:, :, idx].T @ (-V_xx + reg_mat) @ fx[:, :, idx]
+      Q_ux_2 = -fd[:, :, idx].T @ (V_xx + reg_mat) @ fx[:, :, idx]
       Q_ux = jnp.concatenate((Q_ux_1, Q_ux_2), axis=0)
 
       Q_uu_inv = jnp.linalg.inv(Q_uu) 
@@ -518,14 +517,14 @@ class iLQRReachAvoidGame(iLQR):
       idx, V_x, V_xx, n1, ks1, Ks1, n2, ks2, Ks2, critical = args
 
       Q_uu_11 = c_uu[:, :, idx] + fu[:, :, idx].T @ (V_xx + reg_mat) @ fu[:, :, idx]
-      Q_uu_22 = c_dd[:, :, idx] + fd[:, :, idx].T @ (-V_xx + reg_mat) @ fd[:, :, idx]
+      Q_uu_22 = c_dd[:, :, idx] - fd[:, :, idx].T @ (V_xx + reg_mat) @ fd[:, :, idx]
       Q_uu_12 = fu[:, :, idx].T @ (V_xx + reg_mat) @ fd[:, :, idx]
       Q_uu_21 = -Q_uu_12.T
       Q_uu_1 = jnp.concatenate((Q_uu_11, Q_uu_12), axis=1)
       Q_uu_2 = jnp.concatenate((Q_uu_21, Q_uu_22), axis=1)
       Q_uu = jnp.concatenate( (Q_uu_1, Q_uu_2), axis=0)
       Q_ux_1 = fu[:, :, idx].T @ (V_xx + reg_mat) @ fx[:, :, idx]
-      Q_ux_2 = fd[:, :, idx].T @ (-V_xx + reg_mat) @ fx[:, :, idx]
+      Q_ux_2 = -fd[:, :, idx].T @ (V_xx + reg_mat) @ fx[:, :, idx]
       Q_ux = jnp.concatenate((Q_ux_1, Q_ux_2), axis=0)
 
       Q_uu_inv = jnp.linalg.inv(Q_uu) 
@@ -537,7 +536,7 @@ class iLQRReachAvoidGame(iLQR):
 
       f_cl = fx[:, :, idx] - fu[:, :, idx]@Ks1i - fd[:, :, idx]@Ks2i
 
-      V_xx = f_cl.T @V_xx @f_cl + Ks1i.T @ c_uu[:, :, idx] @ Ks1i + Ks2i.T @ c_dd[:, :, idx] @ Ks2i 
+      V_xx_next = f_cl.T @V_xx @f_cl + Ks1i.T @ c_uu[:, :, idx] @ Ks1i + Ks2i.T @ c_dd[:, :, idx] @ Ks2i 
 
       Q_u_1 = fu[:, :, idx].T @ V_x
       Q_u_2 = - fd[:, :, idx].T @ V_x
@@ -549,11 +548,11 @@ class iLQRReachAvoidGame(iLQR):
       ks2 = ks2.at[:, idx].set(-ks2i)
       beta = - fu[:, :, idx]@ks1i - fd[:, :, idx]@ks2i
       
-      V_x = f_cl.T @ (V_x + V_xx@beta) + Ks1i.T@c_uu[:, :, idx]@ks1i - Ks1i.T@c_u[:, idx] + Ks2i.T@c_dd[:, :, idx]@ks2i - Ks2i.T@c_d[:, idx]
+      V_x_next = f_cl.T @ (V_x + V_xx@beta) + Ks1i.T@c_uu[:, :, idx]@ks1i + Ks2i.T@c_dd[:, :, idx]@ks2i
       n1 = n1.at[idx].set(0.5*(ks1i.T@c_uu[:, :, idx] - 2*c_u[:, idx])@ks1i - (2*V_x - V_xx@(-beta)).T@(-beta) + n1[idx])
       n2 = n2.at[idx].set(0.5*(ks2i.T@c_dd[:, :, idx] - 2*c_d[:, idx])@ks2i + (2*V_x - V_xx@(-beta)).T@(-beta) + n2[idx])
       
-      return V_x, V_xx, n1, ks1, Ks1, n2, ks2, Ks2, critical
+      return V_x_next, V_xx_next, n1, ks1, Ks1, n2, ks2, Ks2, critical
 
     @jax.jit
     def backward_pass_looper(i, _carry):
@@ -596,8 +595,8 @@ class iLQRReachAvoidGame(iLQR):
     )
 
     return V_x, V_xx, n1, ks1, Ks1, n2, ks2, Ks2, critical
-  """
   
+  """
   @partial(jax.jit, static_argnames='self')
   def backward_pass(
       self, 
@@ -706,3 +705,4 @@ class iLQRReachAvoidGame(iLQR):
 
     return V_x, V_xx, n1, ks, Ks, n2, ks2, Ks2, critical
     #return V_x, V_xx, ks, Ks, V_x_critical, V_xx_critical
+    """

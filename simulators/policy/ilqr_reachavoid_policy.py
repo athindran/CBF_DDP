@@ -441,7 +441,7 @@ class iLQRReachAvoid(iLQR):
       Ks = Ks.at[:, :, idx].set(-Q_uu_inv @ Q_ux)
       ks = ks.at[:, idx].set(-Q_uu_inv @ Q_u)
  
-      return c_x[:, idx], c_xx[:, :, idx], ks, Ks, c_x[:, idx], c_xx[:, :, idx]
+      return jnp.array( c_x[:, idx] ), jnp.array( c_xx[:, :, idx] ), ks, Ks, jnp.array( c_x[:, idx] ), jnp.array( c_xx[:, :, idx] )
 
     @jax.jit
     def target_backward_func(args):
@@ -458,7 +458,7 @@ class iLQRReachAvoid(iLQR):
       Ks = Ks.at[:, :, idx].set(-Q_uu_inv @ Q_ux)
       ks = ks.at[:, idx].set(-Q_uu_inv @ Q_u)
  
-      return c_x_t[:, idx], c_xx_t[:, :, idx], ks, Ks, c_x_t[:, idx], c_xx_t[:, :, idx]
+      return jnp.array( c_x_t[:, idx] ), jnp.array( c_xx_t[:, :, idx] ), ks, Ks, jnp.array( c_x_t[:, idx] ), jnp.array( c_xx_t[:, :, idx] )
 
     @jax.jit
     def propagate_backward_func(args):
@@ -494,12 +494,12 @@ class iLQRReachAvoid(iLQR):
     @jax.jit
     def failure_final_func(args):
       c_x, c_xx, _, _ = args
-      return c_x[:, self.N - 1], c_xx[:, :, self.N - 1]
+      return jnp.array( c_x[:, self.N - 1] ), jnp.array( c_xx[:, :, self.N - 1] )
 
     @jax.jit
     def target_final_func(args):
       _, _, c_x_t, c_xx_t = args
-      return c_x_t[:, self.N - 1], c_xx_t[:, :, self.N - 1]
+      return jnp.array( c_x_t[:, self.N - 1] ), jnp.array( c_xx_t[:, :, self.N - 1] )
 
     # Initializes.
     Ks = jnp.zeros((self.dim_u, self.dim_x, self.N - 1))
