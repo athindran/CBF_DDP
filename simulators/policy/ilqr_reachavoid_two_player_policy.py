@@ -50,7 +50,6 @@ class iLQRReachAvoidGame(iLQR):
           "ik,k->i", Ks2[:, :, i], (X[:, i] - nominal_states[:, i])
       )
       d = nominal_disturbances[:, i] + alpha * ks2[:, i] + d_fb
-      d = jnp.array([0, 0])
 
       x_nxt, u_clip, d_clip = self.dyn.integrate_forward_jax(X[:, i], u, d)
       X = X.at[:, i + 1].set(x_nxt)
@@ -84,8 +83,8 @@ class iLQRReachAvoidGame(iLQR):
       controls = jnp.array(controls)
     
     disturbances = np.zeros((self.dim_d, self.N))
-    disturbances[0, :] = 0.01
-    disturbances[1, :] = 0.01
+    #disturbances[0, :] = 0.01
+    #disturbances[1, :] = 0.01
     disturbances = jnp.array(disturbances)
 
     # Rolls out the nominal trajectory and gets the initial cost.
@@ -415,6 +414,7 @@ class iLQRReachAvoidGame(iLQR):
 
     return future_cost
   """
+  
   @partial(jax.jit, static_argnames='self')
   def backward_pass(
       self, 
@@ -449,8 +449,8 @@ class iLQRReachAvoidGame(iLQR):
       Ks2 = Ks2.at[:, :, idx].set(-Ks2i) 
       #f_cl = fx[:, :, idx] - fu[:, :, idx]@Ks1 - fd[:, :, idx]@Ks2
 
-      V_x = c_x[:, idx]
-      V_xx = c_xx[:, :, idx]
+      V_x = jnp.array( c_x[:, idx] )
+      V_xx = jnp.array( c_xx[:, :, idx] )
 
       Q_u_1 = fu[:, :, idx].T @ V_x
       Q_u_2 = - fd[:, :, idx].T @ V_x
@@ -494,8 +494,8 @@ class iLQRReachAvoidGame(iLQR):
 
       #f_cl = fx[:, :, idx] - fu[:, :, idx]@Ks1 - fd[:, :, idx]@Ks2
 
-      V_x = c_x_t[:, idx]
-      V_xx = c_xx_t[:, :, idx]
+      V_x = jnp.array( c_x_t[:, idx] )
+      V_xx = jnp.array( c_xx_t[:, :, idx] )
 
       Q_u_1 = fu[:, :, idx].T @ V_x
       Q_u_2 = - fd[:, :, idx].T @ V_x
