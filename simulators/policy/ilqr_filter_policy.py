@@ -165,7 +165,7 @@ class iLQRSafetyFilter(iLQR):
         num_iters= num_iters + 1
 
         # Extract information from solver for enforcing constraint
-        grad_x = solver_info_1['grad_x']
+        grad_x = jnp.array( solver_info_1['grad_x'] )
         _, B0 = self.dyn.get_jacobian( initial_state_jnp , initial_control_jnp )
 
         if self.constraint_type=='quadratic':  
