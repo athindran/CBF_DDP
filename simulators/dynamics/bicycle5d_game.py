@@ -64,7 +64,7 @@ class Bicycle5DGame(BaseDynamics):
 
   @partial(jax.jit, static_argnames='self')
   def _integrate_forward(
-      self, state: DeviceArray, control: DeviceArray, disturbance: DeviceArray
+      self, state: DeviceArray, control: DeviceArray, disturbance: DeviceArray = jnp.zeros((2,))
   ) -> DeviceArray:
     """ Computes one-step time evolution of the system: x_+ = f(x, u).
     The discrete-time dynamics is as below:

@@ -7,7 +7,7 @@ from jaxlib.xla_extension import DeviceArray
 #from jax.experimental import checkify
 from functools import partial
 
-from .ilqr_policy import iLQR
+from .ilqr_two_player_policy import iLQR
 
 
 class iLQRReachAvoidGame(iLQR):
@@ -49,7 +49,8 @@ class iLQRReachAvoidGame(iLQR):
       d_fb = jnp.einsum(
           "ik,k->i", Ks2[:, :, i], (X[:, i] - nominal_states[:, i])
       )
-      d = nominal_disturbances[:, i] + alpha * ks2[:, i] + d_fb
+      d = nominal_disturbances[:, i] + d_fb + alpha * ks2[:, i]
+      #d = jnp.array([0, 0])
 
       x_nxt, u_clip, d_clip = self.dyn.integrate_forward_jax(X[:, i], u, d)
       X = X.at[:, i + 1].set(x_nxt)
@@ -83,8 +84,6 @@ class iLQRReachAvoidGame(iLQR):
       controls = jnp.array(controls)
     
     disturbances = np.zeros((self.dim_d, self.N))
-    #disturbances[0, :] = 0.01
-    #disturbances[1, :] = 0.01
     disturbances = jnp.array(disturbances)
 
     # Rolls out the nominal trajectory and gets the initial cost.
@@ -97,29 +96,30 @@ class iLQRReachAvoidGame(iLQR):
     )
 
     # Target cost derivatives are manually computed for more well-behaved backpropagation
-    target_margins = self.cost.get_mapped_target_margin(states, controls, disturbances)
-    #target_margins, c_x_t, c_xx_t, c_u_t, c_uu_t = self.cost.get_mapped_target_margin_with_derivative(states, controls)
+    #target_margins = self.cost.get_mapped_target_margin(states, controls, disturbances)
+    target_margins, c_x_t, c_xx_t, c_u_t, c_uu_t, _, _ = self.cost.get_mapped_target_margin_with_derivative(states, controls, disturbances)
 
     is_inside_target = (target_margins[0]>0)
     ctrl_costs = self.cost.ctrl_cost.get_mapped_margin(states, controls, disturbances)
+    dist_costs = self.cost.dist_cost.get_mapped_margin(states, controls, disturbances)
     critical, reachavoid__margin = self.get_critical_points(failure_margins, target_margins)
         
-    J = (reachavoid__margin + jnp.sum(ctrl_costs)).astype(float)
+    J = (reachavoid__margin + jnp.sum(ctrl_costs) - jnp.sum(dist_costs)).astype(float)
 
     converged = False
     time0 = time.time()
     
     alpha_chosen = 1
     for i in range(self.max_iter):
-      self.plotter.plot_cvg_animation(states, critical=np.array(critical), fig_name=str(i))
+      #self.plotter.plot_cvg_animation(states, critical=np.array(critical), fig_name=str(i))
       # We need cost derivatives from 0 to N-1, but we only need dynamics
       c_x, c_u, c_d, c_xx, c_uu, c_dd, c_ux = self.cost.get_derivatives(
           states, controls, disturbances
       )
 
-      c_x_t, c_u_t, c_d_t, c_xx_t, c_uu_t, c_dd_t, c_ux_t = self.cost.get_derivatives_target(
-          states, controls, disturbances
-      )
+      #c_x_t, c_u_t, c_d_t, c_xx_t, c_uu_t, c_dd_t, c_ux_t = self.cost.get_derivatives_target(
+      #    states, controls, disturbances
+      #)
 
       fx, fu ,fd = self.dyn.get_jacobian(states[:, :-1], controls[:, :-1], disturbances[:, :-1])
 
@@ -133,17 +133,20 @@ class iLQRReachAvoidGame(iLQR):
       #alpha_chosen, co , co_new = self.baseline_line_search( states, controls, disturbances, Ks1, ks1, Ks2, ks2, J, alpha_init=1.0)
       #alpha_chosen, co , co_new = self.armijo_line_search( states, controls, disturbances, Ks1, ks1, Ks2, ks2, J,
       #                                                    critical=critical, c_u=c_u, alpha_init=1.0)
-      alpha_chosen, co , co_new = self.trust_region_search_conservative( states, controls, disturbances, Ks1, ks1, Ks2, ks2, J,
+      alpha_chosen = self.trust_region_search_conservative( states, controls, disturbances, Ks1, ks1, Ks2, ks2, J,
                                                           critical=critical, c_x=c_x, c_xx=c_xx, 
                                                           alpha_init=1.0)
   
-      print(co, co_new)
+      #print(co, co_new)
       #alpha_chosen = self.armijo_line_search( states, controls, K_closed_loop, k_open_loop, critical, J, c_u)
 
-      states, controls, disturbances, J_new, critical, failure_margins, target_margins, reachavoid_margin = self.forward_pass(states, controls, disturbances, 
-                                                                                                                Ks1, ks1, Ks2, ks2, alpha_chosen)        
-      print(J, J_new, alpha_chosen, self.min_alpha)
-      #states, controls, J_new, critical, failure_margins, target_margins, reachavoid_margin, c_x_t, c_xx_t, c_u_t, c_uu_t = self.forward_pass(states, controls, K_closed_loop, k_open_loop, alpha_chosen) 
+      #states, controls, disturbances, J_new, critical, failure_margins, target_margins, reachavoid_margin = self.forward_pass(states, controls, disturbances, 
+      #                                                                                                          Ks1, ks1, Ks2, ks2, alpha_chosen)        
+      
+      (states, controls, disturbances, J_new, critical, failure_margins, target_margins, 
+       reachavoid_margin, c_x_t, c_xx_t, c_u_t, c_uu_t, _, _) = self.forward_pass(states, controls, disturbances, 
+                                                                                  Ks1, ks1, Ks2, ks2, alpha_chosen)  
+
       if (np.abs((J-J_new) / J) < self.tol):  # Small improvement.
         status = 1
         if J_new>0:
@@ -159,7 +162,7 @@ class iLQRReachAvoidGame(iLQR):
         break
 
 
-    self.plotter.make_animation(i + 1)
+    #self.plotter.make_animation(i + 1)
     t_process = time.time() - time0
     states = np.asarray(states)
     controls = np.asarray(controls)
@@ -267,7 +270,8 @@ class iLQRReachAvoidGame(iLQR):
     def run_forward_pass(args):
       states, controls, disturbances, Ks1, ks1, Ks2, ks2, alpha, J, t_star, J_new, traj_diff, cost_error, old_cost_error, rho = args
       alpha = beta*alpha
-      X, _, _, J_new, _, _, _, _ = self.forward_pass(nominal_states=states, nominal_controls=controls, nominal_disturbances=disturbances, 
+      X, _, _, J_new, _, _, _, _, _, _, _, _, _, _ = self.forward_pass(nominal_states=states, nominal_controls=controls, 
+                                                                       nominal_disturbances=disturbances, 
                                                      Ks1=Ks1, ks1=ks1, Ks2=Ks2, ks2=ks2, alpha=alpha)      
 
       traj_diff = jnp.max(jnp.array([jnp.linalg.norm( x_new - x_old )
@@ -296,8 +300,8 @@ class iLQRReachAvoidGame(iLQR):
       jax.lax.while_loop(check_continue, run_forward_pass, (states, controls, disturbances,
                                                           Ks1, ks1, Ks2, ks2, alpha, J, t_star, J_new, 
                                                           traj_diff, cost_error, old_cost_error, rho)))
-    print("Margin", self.margin)
-    return alpha, J, J_new
+    #print("Margin", self.margin)
+    return alpha
 
   @partial(jax.jit, static_argnames='self')
   def get_critical_points(
@@ -371,8 +375,8 @@ class iLQRReachAvoidGame(iLQR):
     # J = self.cost.get_traj_cost(X, U, closest_pt, slope, theta)
     #! hacky
     failure_margins = self.cost.constraint.get_mapped_margin(X, U, D)
-    target_margins = self.cost.get_mapped_target_margin(X, U, D)
-    #target_margins, c_x_t, c_xx_t, c_u_t, c_uu_t = self.cost.get_mapped_target_margin_with_derivative(X, U)
+    #target_margins = self.cost.get_mapped_target_margin(X, U, D)
+    target_margins, c_x_t, c_xx_t, c_u_t, c_uu_t, c_d_t, c_dd_t = self.cost.get_mapped_target_margin_with_derivative(X, U, D)
 
     ctrl_costs = self.cost.ctrl_cost.get_mapped_margin(X, U, D)
     dist_costs = self.cost.dist_cost.get_mapped_margin(X, U, D)
@@ -387,8 +391,7 @@ class iLQRReachAvoidGame(iLQR):
     #err, future_cost = checked_margin(failure_margins, target_margins, reachavoid_margin)
     #err.throw()
 
-    return X, U, D, J, critical, failure_margins, target_margins, reachavoid_margin
-    #, c_x_t, c_xx_t, c_u_t, c_uu_t
+    return X, U, D, J, critical, failure_margins, target_margins, reachavoid_margin, c_x_t, c_xx_t, c_u_t, c_uu_t, c_d_t, c_dd_t
 
   """
   def brute_force_critical_cost(self, state_costs, target_costs):
@@ -449,9 +452,6 @@ class iLQRReachAvoidGame(iLQR):
       Ks2 = Ks2.at[:, :, idx].set(-Ks2i) 
       #f_cl = fx[:, :, idx] - fu[:, :, idx]@Ks1 - fd[:, :, idx]@Ks2
 
-      V_x = jnp.array( c_x[:, idx] )
-      V_xx = jnp.array( c_xx[:, :, idx] )
-
       Q_u_1 = fu[:, :, idx].T @ V_x
       Q_u_2 = - fd[:, :, idx].T @ V_x
       Q_u = jnp.concatenate((Q_u_1, Q_u_2), axis=0)
@@ -461,11 +461,8 @@ class iLQRReachAvoidGame(iLQR):
       ks1 = ks1.at[:, idx].set(-ks1i)
       ks2 = ks2.at[:, idx].set(-ks2i)
       beta = - fu[:, :, idx]@ks1i - fd[:, :, idx]@ks2i
-      
-      n1 = n1.at[idx].set(0.5*(ks1i.T@c_uu[:, :, idx] - 2*c_u[:, idx])@ks1i - (2*V_x - V_xx@(-beta)).T@(-beta) + n1[idx])
-      n2 = n2.at[idx].set(0.5*(ks2i.T@c_dd[:, :, idx] - 2*c_d[:, idx])@ks2i + (2*V_x - V_xx@(-beta)).T@(-beta) + n2[idx])
  
-      return V_x, V_xx, n1, ks1, Ks1, n2, ks2, Ks2, critical
+      return jnp.array( c_x[:, idx] ), jnp.array( c_xx[:, :, idx] ), n1, ks1, Ks1, n2, ks2, Ks2, critical
 
     @jax.jit
     def target_backward_func(args):
@@ -494,9 +491,6 @@ class iLQRReachAvoidGame(iLQR):
 
       #f_cl = fx[:, :, idx] - fu[:, :, idx]@Ks1 - fd[:, :, idx]@Ks2
 
-      V_x = jnp.array( c_x_t[:, idx] )
-      V_xx = jnp.array( c_xx_t[:, :, idx] )
-
       Q_u_1 = fu[:, :, idx].T @ V_x
       Q_u_2 = - fd[:, :, idx].T @ V_x
       Q_u = jnp.concatenate((Q_u_1, Q_u_2), axis=0)
@@ -507,10 +501,8 @@ class iLQRReachAvoidGame(iLQR):
       ks2 = ks2.at[:, idx].set(-ks2i)
       beta = - fu[:, :, idx]@ks1i - fd[:, :, idx]@ks2i
       
-      n1 = n1.at[idx].set(0.5*(ks1i.T@c_uu[:, :, idx] - 2*c_u[:, idx])@ks1i - (2*V_x - V_xx@(-beta)).T@(-beta) + n1[idx])
-      n2 = n2.at[idx].set(0.5*(ks2i.T@c_dd[:, :, idx] - 2*c_d[:, idx])@ks2i + (2*V_x - V_xx@(-beta)).T@(-beta) + n2[idx])
 
-      return V_x, V_xx, n1, ks1, Ks1, n2, ks2, Ks2, critical
+      return jnp.array( c_x_t[:, idx] ), jnp.array( c_xx_t[:, :, idx] ), n1, ks1, Ks1, n2, ks2, Ks2, critical
 
     @jax.jit
     def propagate_backward_func(args):
@@ -549,8 +541,8 @@ class iLQRReachAvoidGame(iLQR):
       beta = - fu[:, :, idx]@ks1i - fd[:, :, idx]@ks2i
       
       V_x_next = f_cl.T @ (V_x + V_xx@beta) + Ks1i.T@c_uu[:, :, idx]@ks1i + Ks2i.T@c_dd[:, :, idx]@ks2i
-      n1 = n1.at[idx].set(0.5*(ks1i.T@c_uu[:, :, idx] - 2*c_u[:, idx])@ks1i - (2*V_x - V_xx@(-beta)).T@(-beta) + n1[idx])
-      n2 = n2.at[idx].set(0.5*(ks2i.T@c_dd[:, :, idx] - 2*c_d[:, idx])@ks2i + (2*V_x - V_xx@(-beta)).T@(-beta) + n2[idx])
+      n1 = n1.at[idx].set(0.5*(ks1i.T@c_uu[:, :, idx] - 2*c_u[:, idx])@ks1i - (2*V_x - V_xx@(-beta)).T@(-beta) + n1[idx + 1])
+      n2 = n2.at[idx].set(0.5*(ks2i.T@c_dd[:, :, idx] - 2*c_d[:, idx])@ks2i + (2*V_x - V_xx@(-beta)).T@(-beta) + n2[idx + 1])
       
       return V_x_next, V_xx_next, n1, ks1, Ks1, n2, ks2, Ks2, critical
 
@@ -585,7 +577,7 @@ class iLQRReachAvoidGame(iLQR):
     ks2 = jnp.zeros((self.dim_d, self.N - 1))
     n2 = jnp.zeros((self.N - 1, ))
 
-    reg_mat = 1e-4 * jnp.eye(self.dim_x)
+    reg_mat = self.eps * jnp.eye(self.dim_x)
 
     # If critical is 2 choose target - hacky!!
     V_x, V_xx = jax.lax.cond(critical[self.N -1]==1, failure_final_func, target_final_func, (c_x, c_xx, c_x_t, c_xx_t))

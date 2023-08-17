@@ -25,7 +25,7 @@ class CarSingle5DEnv(BaseSingleEnv):
     config_constraint.TRACK_WIDTH_LEFT = config_env.TRACK_WIDTH_LEFT
     config_constraint.TRACK_WIDTH_RIGHT = config_env.TRACK_WIDTH_RIGHT
     config_constraint.OBS_SPEC = config_env.OBS_SPEC
-    config_constraint.TARGET_SPEC = config_env.TARGET_SPEC
+    #config_constraint.TARGET_SPEC = config_env.TARGET_SPEC
     config_constraint.OBSC_TYPE = config_env.OBSC_TYPE
     self.obsc_type = config_env.OBSC_TYPE 
     
@@ -54,8 +54,8 @@ class CarSingle5DEnv(BaseSingleEnv):
       for circle_spec in self.cost.constraint.obs_spec:
         self.obs_vertices_list.append(circle_spec)
 
-      for circle_spec in self.cost.constraint.target_spec:
-        self.target_vertices_list.append(circle_spec)
+      #for circle_spec in self.cost.constraint.target_spec:
+      #  self.target_vertices_list.append(circle_spec)
 
     # Initializes.
     self.reset_rej_sampling = getattr(config_env, "RESET_REJ_SAMPLING", True)
@@ -87,7 +87,7 @@ class CarSingle5DEnv(BaseSingleEnv):
     cost = float(
         jnp.sum(
             self.cost.constraint.get_stage_margin(
-                states_all, controls_all
+                states_all, controls_all, np.zeros((2, controls_all.shape[1]))
             )
         )
     )
@@ -102,7 +102,7 @@ class CarSingle5DEnv(BaseSingleEnv):
     cost = float(
         jnp.sum(
             self.cost.get_target_stage_margin(
-                states_all, controls_all
+                states_all, controls_all, np.zeros((2, controls_all.shape[1]))
             )
         )
     )

@@ -14,7 +14,9 @@ from .policy.base_policy import BasePolicy
 from .policy.ilqr_policy import iLQR
 from .policy.ilqr_filter_policy import iLQRSafetyFilter
 from .policy.ilqr_reachavoid_policy import iLQRReachAvoid
-from .policy.ilqr_reachavoid_two_player_policy import iLQRReachAvoidGame
+
+from .policy.twoplayer.ilqr_reachavoid_two_player_policy import iLQRReachAvoidGame
+from .policy.twoplayer.ilqr_filter_twoplayer_policy import iLQRSafetyFilter as iLQRSafetyFilterTwo
 
 class Agent:
   """A basic unit in our environments.
@@ -142,6 +144,10 @@ class Agent:
       )
     elif policy_type == "iLQRSafetyFilter":
       self.policy = iLQRSafetyFilter(
+          self.id, config, self.dyn, cost, **kwargs
+      )
+    elif policy_type == "iLQRSafetyFilterGame":
+      self.policy = iLQRSafetyFilterTwo(
           self.id, config, self.dyn, cost, **kwargs
       )
     else:

@@ -7,7 +7,7 @@ from jax import numpy as jnp
 from jaxlib.xla_extension import DeviceArray
 from functools import partial
 
-from .base_policy import BasePolicy
+from simulators.policy.base_policy import BasePolicy
 
 class iLQR(BasePolicy):
 
@@ -58,7 +58,7 @@ class iLQR(BasePolicy):
       # We need cost derivatives from 0 to N-1, but we only need dynamics
       # jacobian from 0 to N-2.
       c_x, c_u, c_xx, c_uu, c_ux = self.cost.get_derivatives(states, controls)
-      fx, fu = self.dyn.get_jacobian(states[:, :-1], controls[:, :-1])
+      fx, fu, _ = self.dyn.get_jacobian(states[:, :-1], controls[:, :-1], jnp.zeros((2, controls.shape[1] - 1)))
       K_closed_loop, k_open_loop = self.backward_pass(
           c_x=c_x, c_u=c_u, c_xx=c_xx, c_uu=c_uu, c_ux=c_ux, fx=fx, fu=fu
       )
@@ -127,7 +127,7 @@ class iLQR(BasePolicy):
           "ik,k->i", K_closed_loop[:, :, i], (X[:, i] - nominal_states[:, i])
       )
       u = nominal_controls[:, i] + alpha * k_open_loop[:, i] + u_fb
-      x_nxt, u_clip = self.dyn.integrate_forward_jax(X[:, i], u)
+      x_nxt, u_clip, _ = self.dyn.integrate_forward_jax(X[:, i], u, jnp.zeros((2,)))
       X = X.at[:, i + 1].set(x_nxt)
       U = U.at[:, i].set(u_clip)
       return X, U
@@ -147,7 +147,7 @@ class iLQR(BasePolicy):
     @jax.jit
     def _rollout_nominal_step(i, args):
       X, U = args
-      x_nxt, u_clip = self.dyn.integrate_forward_jax(X[:, i], U[:, i])
+      x_nxt, u_clip, _ = self.dyn.integrate_forward_jax(X[:, i], U[:, i], jnp.zeros((2,)))
       X = X.at[:, i + 1].set(x_nxt)
       U = U.at[:, i].set(u_clip)
       return X, U

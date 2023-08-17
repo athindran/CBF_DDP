@@ -59,7 +59,7 @@ def plot_run_summary(dyn_id, env, state_history, action_history, config_solver, 
     
     action_space = np.array(config_agent.ACTION_RANGE, dtype=np.float32)
 
-    if dyn_id=="Bicycle5D":
+    if dyn_id=="Bicycle5D" or dyn_id=="Bicycle5DGame":
       fig, axes = plt.subplots(
         1, 3, figsize=(16.0, 3.4)
       )

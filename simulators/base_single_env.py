@@ -252,7 +252,7 @@ class BaseSingleEnv(BaseEnv):
         reachavoid_plan = solver_info['states']
         reachavoid_plan_ctrl = solver_info['controls']
 
-        target_margins = self.cost.get_mapped_target_margin(reachavoid_plan, reachavoid_plan_ctrl)
+        target_margins = self.cost.get_mapped_target_margin(reachavoid_plan, reachavoid_plan_ctrl, solver_info['disturbances'])
 
         target_margins = np.array(target_margins)
 
@@ -313,7 +313,8 @@ class BaseSingleEnv(BaseEnv):
     states = [initial_state]
     current_state = np.array(initial_state)
     while current_state[2]>self.agent.dyn.v_min:
-      current_state, _ = self.agent.integrate_forward(current_state, stopping_ctrl)
+      outs = self.agent.integrate_forward(current_state, stopping_ctrl)
+      current_state = outs[0]
       states.append(current_state)
 
     return states
