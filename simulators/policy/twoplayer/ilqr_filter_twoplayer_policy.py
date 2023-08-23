@@ -101,7 +101,7 @@ class iLQRSafetyFilter(iLQR):
 
     if(self.filter_type=="LR"):
       solver_info_0['barrier_filter_steps'] = self.barrier_filter_steps
-      if(solver_info_1['Vopt']<=self.lr_threshold):
+      if(solver_info_1['marginopt']<=self.lr_threshold):
         self.filter_steps += 1
         solver_info_0['process_time'] = time.time() - start_time
         solver_info_0['filter_steps'] = self.filter_steps

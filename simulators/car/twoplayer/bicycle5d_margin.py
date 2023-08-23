@@ -155,8 +155,10 @@ class Bicycle5DConstraintMargin( BaseMargin ):
     self.obs_spec = config.OBS_SPEC
     self.obsc_type = config.OBSC_TYPE
     self.plan_dyn = plan_dyn
-
-    self.disturbance_margin = 0.0
+    
+    self.stopping_length = 25
+    self.disturbance_margin = self.stopping_length*0.01*self.plan_dyn.dt*jnp.sqrt(2)
+    print('Margin allowance for disturbance in stopping path: ', self.disturbance_margin)
 
     self.dim_x = plan_dyn.dim_x
     self.dim_u = plan_dyn.dim_u
@@ -244,7 +246,8 @@ class Bicycle5DConstraintMargin( BaseMargin ):
     """
     @jax.jit
     def roll_forward(args):
-      current_state, stopping_ctrl, target_cost, v_min = args
+      iters, current_state, stopping_ctrl, target_cost, v_min = args
+      iters = iters + 1
 
       if self.use_road:
         target_cost = jnp.minimum(target_cost,  self.road_position_min_cost.get_stage_margin(
@@ -272,11 +275,11 @@ class Bicycle5DConstraintMargin( BaseMargin ):
              
       current_state, _, _ = self.plan_dyn.integrate_forward_jax(current_state, stopping_ctrl, jnp.zeros((2, )))   
 
-      return current_state, stopping_ctrl, target_cost, v_min
+      return iters, current_state, stopping_ctrl, target_cost, v_min
     
     @jax.jit
     def check_stopped(args):
-      current_state, stopping_ctrl, target_cost, v_min = args
+      iters, current_state, stopping_ctrl, target_cost, v_min = args
       return current_state[2]>v_min
     
     target_cost = jnp.inf
@@ -284,11 +287,11 @@ class Bicycle5DConstraintMargin( BaseMargin ):
     stopping_ctrl = jnp.array([self.plan_dyn.ctrl_space[0, 0]/2.0, 0.])
     
     current_state = jnp.array( state )
+    iters = 0
+    iters, current_state, stopping_ctrl, target_cost, v_min = jax.lax.while_loop( check_stopped, roll_forward, 
+                                                                          (iters, current_state, stopping_ctrl, target_cost, self.plan_dyn.v_min))
 
-    current_state, stopping_ctrl, target_cost, v_min = jax.lax.while_loop( check_stopped, roll_forward, 
-                                                                          (current_state, stopping_ctrl, target_cost, self.plan_dyn.v_min))
-
-    _, _, target_cost, _ = roll_forward((current_state, stopping_ctrl, target_cost, v_min))
+    iters, _, _, target_cost, _ = roll_forward((iters, current_state, stopping_ctrl, target_cost, v_min))
 
     return target_cost - self.disturbance_margin
 
@@ -318,8 +321,9 @@ class Bicycle5DConstraintMargin( BaseMargin ):
     
     @jax.jit
     def roll_forward(args):
-      current_state, stopping_ctrl, target_cost, v_min, c_x_target, c_xx_target, iters, pinch_point, f_x_all = args
+      iters, current_state, stopping_ctrl, target_cost, v_min, c_x_target, c_xx_target, iters, pinch_point, f_x_all = args
       
+      iters = iters + 1
       #f_x_curr, f_u_curr = self.plan_dyn.get_jacobian(current_state[:, jnp.newaxis], stopping_ctrl[:, jnp.newaxis])
       #f_x_all = f_x_all.at[:, :, iters].set(f_x_curr[:, :, -1])
       f_x_all = f_x_all.at[:, :, iters].set(self.plan_dyn.get_jacobian_fx(current_state, stopping_ctrl))
@@ -374,11 +378,11 @@ class Bicycle5DConstraintMargin( BaseMargin ):
       current_state, _, _ = self.plan_dyn.integrate_forward_jax(current_state, stopping_ctrl, jnp.zeros((2, )))
       iters = iters + 1
       
-      return current_state, stopping_ctrl, target_cost, v_min, c_x_target, c_xx_target, iters, pinch_point, f_x_all
+      return iters, current_state, stopping_ctrl, target_cost, v_min, c_x_target, c_xx_target, iters, pinch_point, f_x_all
     
     @jax.jit
     def check_stopped(args):
-      current_state, _, _, v_min, _, _, _, _, _ = args
+      _, current_state, _, _, v_min, _, _, _, _, _ = args
       return current_state[2]>v_min
     
     @jax.jit
@@ -395,10 +399,11 @@ class Bicycle5DConstraintMargin( BaseMargin ):
     c_xx_target = jnp.zeros((self.plan_dyn.dim_x, self.plan_dyn.dim_x))
 
     f_x_all = jnp.zeros((self.plan_dyn.dim_x, self.plan_dyn.dim_x, 50))
-    current_state, stopping_ctrl, target_cost, v_min, c_x_target, c_xx_target, iters, pinch_point, f_x_all = jax.lax.while_loop( 
-       check_stopped, roll_forward, (current_state, stopping_ctrl, target_cost, self.plan_dyn.v_min, c_x_target, c_xx_target, 0, 0, f_x_all))
-    _, _, target_cost, _, c_x_target, c_xx_target, iters, pinch_point, f_x_all = roll_forward(
-       (current_state, stopping_ctrl, target_cost, v_min, c_x_target, c_xx_target, iters, pinch_point, f_x_all))
+    iters = 0
+    iters, current_state, stopping_ctrl, target_cost, v_min, c_x_target, c_xx_target, iters, pinch_point, f_x_all = jax.lax.while_loop( 
+       check_stopped, roll_forward, (iters, current_state, stopping_ctrl, target_cost, self.plan_dyn.v_min, c_x_target, c_xx_target, 0, 0, f_x_all))
+    iters, _, _, target_cost, _, c_x_target, c_xx_target, iters, pinch_point, f_x_all = roll_forward(
+       (iters, current_state, stopping_ctrl, target_cost, v_min, c_x_target, c_xx_target, iters, pinch_point, f_x_all))
     
     jacobian = jax.lax.fori_loop(0, pinch_point, backprop_jacobian, jnp.eye(self.plan_dyn.dim_x))
 
@@ -406,7 +411,7 @@ class Bicycle5DConstraintMargin( BaseMargin ):
     c_x_target = jacobian.T @ c_x_target
     c_xx_target = jacobian.T @ c_xx_target @ jacobian
 
-    return target_cost, c_x_target, c_xx_target
+    return target_cost - self.disturbance_margin, c_x_target, c_xx_target
 
   @partial(jax.jit, static_argnames='self')
   def get_cost_dict(

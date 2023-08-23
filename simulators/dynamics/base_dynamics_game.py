@@ -23,7 +23,7 @@ class BaseDynamics(ABC):
     self.dim_d: int = self.dstb_space.shape[0]
 
   def integrate_forward(
-      self, state: np.ndarray, control: np.ndarray, disturbance: np.ndarray=np.zeros((2,)), **kwargs
+      self, state: np.ndarray, control: np.ndarray, disturbance: np.ndarray=None, **kwargs
   ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Finds the next state of the vehicle given the current state and
@@ -37,6 +37,9 @@ class BaseDynamics(ABC):
         np.ndarray: next state.
         np.ndarray: clipped control.
     """
+    if disturbance is None:
+      disturbance = 0.01*np.random.rand(2)
+      
     state_nxt, ctrl_clip, dstb_clip = self.integrate_forward_jax(
         jnp.array(state), jnp.array(control), jnp.array(disturbance)
     )

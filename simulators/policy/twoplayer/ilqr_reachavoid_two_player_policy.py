@@ -36,7 +36,7 @@ class iLQRReachAvoidGame(iLQR):
   @partial(jax.jit, static_argnames='self')
   def rollout(
       self, nominal_states: DeviceArray, nominal_controls: DeviceArray, nominal_disturbances: DeviceArray,
-      Ks1: DeviceArray, ks1: DeviceArray, Ks2: DeviceArray, ks2: DeviceArray, alpha: float
+      Ks1: DeviceArray, ks1: DeviceArray, Ks2: DeviceArray, ks2: DeviceArray, alpha_1: float, alpha_2: float
   ) -> Tuple[DeviceArray, DeviceArray]:
 
     @jax.jit
@@ -45,12 +45,11 @@ class iLQRReachAvoidGame(iLQR):
       u_fb = jnp.einsum(
           "ik,k->i", Ks1[:, :, i], (X[:, i] - nominal_states[:, i])
       )
-      u = nominal_controls[:, i] + alpha * ks1[:, i] + u_fb
+      u = nominal_controls[:, i] + alpha_1 * ks1[:, i] + u_fb
       d_fb = jnp.einsum(
           "ik,k->i", Ks2[:, :, i], (X[:, i] - nominal_states[:, i])
       )
-      d = nominal_disturbances[:, i] + d_fb + alpha * ks2[:, i]
-      #d = jnp.array([0, 0])
+      d = nominal_disturbances[:, i] + d_fb + alpha_2 * ks2[:, i]
 
       x_nxt, u_clip, d_clip = self.dyn.integrate_forward_jax(X[:, i], u, d)
       X = X.at[:, i + 1].set(x_nxt)
@@ -132,29 +131,43 @@ class iLQRReachAvoidGame(iLQR):
       # Choose the best alpha scaling using appropriate line search methods
       #alpha_chosen, co , co_new = self.baseline_line_search( states, controls, disturbances, Ks1, ks1, Ks2, ks2, J, alpha_init=1.0)
       #alpha_chosen, co , co_new = self.armijo_line_search( states, controls, disturbances, Ks1, ks1, Ks2, ks2, J,
-      #                                                    critical=critical, c_u=c_u, alpha_init=1.0)
-      alpha_chosen = self.trust_region_search_conservative( states, controls, disturbances, Ks1, ks1, Ks2, ks2, J,
+      #  
+      #                                                   critical=critical, c_u=c_u, alpha_init=1.0)
+      #print("Initial", J)
+      J_init = jnp.array( J )
+      alpha_chosen_1, J , J_new = self.trust_region_search_conservative( states, controls, disturbances, Ks1, ks1, 
+                                                                        jnp.zeros(Ks2.shape), jnp.zeros(ks2.shape), J,
                                                           critical=critical, c_x=c_x, c_xx=c_xx, 
-                                                          alpha_init=1.0)
-  
-      #print(co, co_new)
-      #alpha_chosen = self.armijo_line_search( states, controls, K_closed_loop, k_open_loop, critical, J, c_u)
+                                                          alpha_init=1.0, alpha_opponent=self.min_alpha, adversary=False)
+      #print("Player 1", J, J_new, alpha_chosen_1)
 
-      #states, controls, disturbances, J_new, critical, failure_margins, target_margins, reachavoid_margin = self.forward_pass(states, controls, disturbances, 
-      #                                                                                                          Ks1, ks1, Ks2, ks2, alpha_chosen)        
-      
-      (states, controls, disturbances, J_new, critical, failure_margins, target_margins, 
-       reachavoid_margin, c_x_t, c_xx_t, c_u_t, c_uu_t, _, _) = self.forward_pass(states, controls, disturbances, 
-                                                                                  Ks1, ks1, Ks2, ks2, alpha_chosen)  
+      alpha_chosen_2, J, J_new = self.trust_region_search_conservative( states, controls, disturbances, Ks1, ks1, Ks2, ks2, J=jnp.array(J_new),
+                                                          critical=critical, c_x=c_x, c_xx=c_xx, 
+                                                          alpha_init=1.0, alpha_opponent=alpha_chosen_1, adversary=True)
+      #print("Player 2", J, J_new, alpha_chosen_2)
+      if J_new<J:
+        alpha_chosen_2 = max(alpha_chosen_2, self.min_alpha)
+        (states, controls, disturbances, J_new, critical, failure_margins, target_margins, 
+              reachavoid_margin, c_x_t, c_xx_t, c_u_t, c_uu_t, _, _) = self.forward_pass(states, controls, disturbances, 
+                                                                                  Ks1, ks1, Ks2, ks2, 
+                                                                                  alpha_1=alpha_chosen_1,
+                                                                                  alpha_2=alpha_chosen_2)
+      else:
+        (states, controls, disturbances, J_new, critical, failure_margins, target_margins, 
+              reachavoid_margin, c_x_t, c_xx_t, c_u_t, c_uu_t, _, _) = self.forward_pass(states, controls, disturbances, 
+                                                                                  Ks1, ks1, jnp.zeros(Ks2.shape), jnp.zeros(ks2.shape),
+                                                                                  alpha_1=alpha_chosen_1,
+                                                                                  alpha_2=alpha_chosen_2)
 
-      if (np.abs((J-J_new) / J) < self.tol):  # Small improvement.
+
+      if (np.abs((J_init-J_new) / J_init) < self.tol):  # Small improvement.
         status = 1
         if J_new>0:
           converged = True
 
-      J = J_new
+      J = jnp.array( J_new )
       
-      if alpha_chosen<self.min_alpha:
+      if alpha_chosen_1<self.min_alpha and alpha_chosen_2<self.min_alpha:
           status = 2
           break
       # Terminates early if the objective improvement is negligible.
@@ -234,9 +247,9 @@ class iLQRReachAvoidGame(iLQR):
   
   @partial(jax.jit, static_argnames='self')
   def trust_region_search_conservative( self, states, controls, disturbances, Ks1, ks1, Ks2, ks2, J, critical, 
-                         c_x, c_xx, alpha_init=1.0, beta=0.7):
+                         c_x, c_xx, adversary=False, alpha_init=1.0, alpha_opponent=0.0, beta=0.7):
     alpha = alpha_init
-    J_new = -jnp.inf
+    J_new = jnp.array( J )
     t_star = jnp.where(critical!=0, size=self.N-1)[0][0]
 
     self.margin = 2
@@ -265,15 +278,29 @@ class iLQRReachAvoidGame(iLQR):
       _, _ = jax.lax.cond(jnp.logical_and( jnp.abs(traj_diff - self.margin)<0.01, rho>0.75), increase_margin, 
                                                 fix_margin, (cost_error, old_cost_error))     
       return cost_error, old_cost_error, traj_diff, rho
+    
+    @jax.jit
+    def forward_pass_player1(args):
+      states, controls, disturbances, Ks1, ks1, Ks2, ks2, alpha, alpha_opponent = args
+      return self.forward_pass(nominal_states=states, nominal_controls=controls, 
+                                                                       nominal_disturbances=disturbances, 
+                                                     Ks1=Ks1, ks1=ks1, Ks2=Ks2, ks2=ks2, alpha_1=alpha, alpha_2=alpha_opponent)
+    @jax.jit
+    def forward_pass_player2(args):
+      states, controls, disturbances, Ks1, ks1, Ks2, ks2, alpha, alpha_opponent = args
+      return self.forward_pass(nominal_states=states, nominal_controls=controls, 
+                                                                       nominal_disturbances=disturbances, 
+                                                     Ks1=Ks1, ks1=ks1, Ks2=Ks2, ks2=ks2, alpha_1=alpha_opponent, alpha_2=alpha)
 
     @jax.jit
     def run_forward_pass(args):
-      states, controls, disturbances, Ks1, ks1, Ks2, ks2, alpha, J, t_star, J_new, traj_diff, cost_error, old_cost_error, rho = args
+      iters, states, controls, disturbances, Ks1, ks1, Ks2, ks2, alpha, J, t_star, J_new, traj_diff, cost_error, old_cost_error, rho = args
+      iters = iters+1
       alpha = beta*alpha
-      X, _, _, J_new, _, _, _, _, _, _, _, _, _, _ = self.forward_pass(nominal_states=states, nominal_controls=controls, 
-                                                                       nominal_disturbances=disturbances, 
-                                                     Ks1=Ks1, ks1=ks1, Ks2=Ks2, ks2=ks2, alpha=alpha)      
 
+      X, _, _, J_new, _, _, _, _, _, _, _, _, _, _ = jax.lax.cond(
+        adversary, forward_pass_player2, forward_pass_player1, (states, controls, disturbances, Ks1, ks1, Ks2, ks2, alpha, alpha_opponent ))
+      
       traj_diff = jnp.max(jnp.array([jnp.linalg.norm( x_new - x_old )
                           for x_new, x_old in zip(X[:2, :], states[:2, :])]))
       
@@ -284,24 +311,63 @@ class iLQRReachAvoidGame(iLQR):
       old_cost_error = jnp.abs(cost_error)
       cost_error = jnp.abs( delta_cost_quadratic_approx - delta_cost_actual )
       rho = delta_cost_actual/delta_cost_quadratic_approx
-      return  states, controls, disturbances, Ks1, ks1, Ks2, ks2, alpha, J, t_star, J_new, traj_diff, cost_error, old_cost_error, rho
+      return  iters, states, controls, disturbances, Ks1, ks1, Ks2, ks2, alpha, J, t_star, J_new, traj_diff, cost_error, old_cost_error, rho
 
     @jax.jit
     def check_continue(args):
-      _, _, _, _, _, _, _, alpha, J, _, J_new, traj_diff, cost_error, old_cost_error, rho = args
+      iters, _, _, _, _, _, _, _, alpha, J, _, J_new, traj_diff, cost_error, old_cost_error, rho = args
       trust_region_violation = ( traj_diff>self.margin )
       improvement_violation = (J_new < J)
 
       cost_error, old_cost_error, traj_diff, rho = jax.lax.cond((rho<=0.25), decrease_margin, 
                                                 increase_or_fix_margin, (cost_error, old_cost_error, traj_diff, rho))      
-      return jnp.logical_and( alpha>self.min_alpha, jnp.logical_or(trust_region_violation , improvement_violation))
+      return jnp.logical_or(
+        jnp.logical_and( alpha>self.min_alpha, jnp.logical_or(trust_region_violation , improvement_violation)),
+        iters==0
+      )
     
-    states, controls, disturbances, Ks1, ks1, Ks2, ks2, alpha, J, t_star, J_new, traj_diff, cost_error, _, _ = (
-      jax.lax.while_loop(check_continue, run_forward_pass, (states, controls, disturbances,
+    @jax.jit
+    def check_continue_adversary(args):
+      iters, _, _, _, _, _, _, _, alpha, J, _, J_new, traj_diff, cost_error, old_cost_error, rho = args
+      trust_region_violation = ( traj_diff>self.margin )
+      improvement_violation = (J_new >= J)
+
+      cost_error, old_cost_error, traj_diff, rho = jax.lax.cond((rho<=0.25), decrease_margin, 
+                                                increase_or_fix_margin, (cost_error, old_cost_error, traj_diff, rho))      
+      return jnp.logical_or(
+        jnp.logical_and( alpha>self.min_alpha, jnp.logical_or(trust_region_violation , improvement_violation)),
+        iters==0
+      )
+        
+    @jax.jit
+    def loop_player1(args):
+      (iters, states, controls, disturbances, 
+        Ks1, ks1, Ks2, ks2, alpha, J, t_star, J_new, 
+        traj_diff, cost_error, old_cost_error, rho) = args
+      return  jax.lax.while_loop(check_continue, run_forward_pass, (iters, states, controls, disturbances,
                                                           Ks1, ks1, Ks2, ks2, alpha, J, t_star, J_new, 
-                                                          traj_diff, cost_error, old_cost_error, rho)))
+                                                          traj_diff, cost_error, old_cost_error, rho))
+    
+    @jax.jit
+    def loop_player2(args):
+      (iters, states, controls, disturbances, 
+        Ks1, ks1, Ks2, ks2, alpha, J, t_star, J_new, 
+        traj_diff, cost_error, old_cost_error, rho) = args
+      return  jax.lax.while_loop(check_continue_adversary, run_forward_pass, (iters, states, controls, disturbances,
+                                                          Ks1, ks1, Ks2, ks2, alpha, J, t_star, J_new, 
+                                                          traj_diff, cost_error, old_cost_error, rho))
+    
+    #if not adversary:
+    iters = 0
+    (_, states, controls, disturbances, Ks1, ks1, Ks2, ks2, 
+     alpha, J, t_star, J_new, traj_diff, cost_error, _, _) = jax.lax.cond(jnp.logical_not(adversary),
+                                                                          loop_player1, 
+                                                                          loop_player2,
+                                                                          (iters, states, controls, disturbances,
+                                                                                      Ks1, ks1, Ks2, ks2, alpha, J, t_star, J_new, 
+                                                                                      traj_diff, cost_error, old_cost_error, rho))
     #print("Margin", self.margin)
-    return alpha
+    return alpha, J , J_new
 
   @partial(jax.jit, static_argnames='self')
   def get_critical_points(
@@ -365,11 +431,11 @@ class iLQRReachAvoidGame(iLQR):
   @partial(jax.jit, static_argnames='self')
   def forward_pass(
       self, nominal_states: DeviceArray, nominal_controls: DeviceArray, nominal_disturbances: DeviceArray,
-      Ks1: DeviceArray, ks1: DeviceArray, Ks2: DeviceArray, ks2: DeviceArray, alpha: float
+      Ks1: DeviceArray, ks1: DeviceArray, Ks2: DeviceArray, ks2: DeviceArray, alpha_1: float, alpha_2: float
   ) -> Tuple[DeviceArray, DeviceArray, float, DeviceArray, DeviceArray,
              DeviceArray, DeviceArray]:
     X, U, D = self.rollout(
-        nominal_states, nominal_controls, nominal_disturbances, Ks1, ks1, Ks2, ks2, alpha
+        nominal_states, nominal_controls, nominal_disturbances, Ks1, ks1, Ks2, ks2, alpha_1, alpha_2
     )
 
     # J = self.cost.get_traj_cost(X, U, closest_pt, slope, theta)
