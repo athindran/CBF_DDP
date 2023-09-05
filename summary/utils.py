@@ -86,6 +86,49 @@ def plot_run_summary(dyn_id, env, state_history, action_history, config_solver, 
                     labels=[action_space[1, 0], action_space[1, 1]], fontsize=8)
 
       fig.savefig(os.path.join(fig_folder, "auxiliary_controls.png"), dpi=200)
+    elif dyn_id=="TwoWheel7D":
+      fig, axes = plt.subplots(
+        2, 3, figsize=(16.0, 6.8)
+      )
+      ax = axes[0, 0]
+      ax.plot(kwargs["value_history"])
+      ax.set_xlabel("Timestep")
+      ax.set_ylabel("Receding Value function")
+      ax.set_xticks(ticks=[0, ctrls.shape[1]], labels=[0, ctrls.shape[1]], fontsize=8)
+
+      ax = axes[0, 1]
+      ax.plot(ctrls[0, :])
+      ax.set_xlabel("Timestep")
+      ax.set_ylabel("Accel (fr)")
+      ax.set_xticks(ticks=[0, ctrls.shape[1]], labels=[0, ctrls.shape[1]], fontsize=8)
+      ax.set_yticks(ticks=[action_space[0, 0], action_space[0, 1]], 
+                    labels=[action_space[0, 0], action_space[0, 1]], fontsize=8)
+
+      ax = axes[0, 2]
+      ax.plot(ctrls[1, :])
+      ax.set_xlabel("Timestep")
+      ax.set_ylabel("Accel (re)")
+      ax.set_xticks(ticks=[0, ctrls.shape[1]], labels=[0, ctrls.shape[1]], fontsize=8)
+      ax.set_yticks(ticks=[action_space[1, 0], action_space[1, 1]], 
+                    labels=[action_space[1, 0], action_space[1, 1]], fontsize=8)
+      
+      ax = axes[1, 0]
+      ax.plot(ctrls[2, :])
+      ax.set_xlabel("Timestep")
+      ax.set_ylabel("Steer (fr)")
+      ax.set_xticks(ticks=[0, ctrls.shape[1]], labels=[0, ctrls.shape[1]], fontsize=8)
+      ax.set_yticks(ticks=[action_space[2, 0], action_space[2, 1]], 
+                    labels=[action_space[2, 0], action_space[2, 1]], fontsize=8)
+      
+      ax = axes[1, 1]
+      ax.plot(ctrls[3, :])
+      ax.set_xlabel("Timestep")
+      ax.set_ylabel("Steer (re)")
+      ax.set_xticks(ticks=[0, ctrls.shape[1]], labels=[0, ctrls.shape[1]], fontsize=8)
+      ax.set_yticks(ticks=[action_space[3, 0], action_space[3, 1]], 
+                    labels=[action_space[3, 0], action_space[3, 1]], fontsize=8)
+
+      fig.savefig(os.path.join(fig_folder, "auxiliary_controls.png"), dpi=200)
 
     fig, axes = plt.subplots(
         1, 2, figsize=(10.0, 2.5)
@@ -362,7 +405,8 @@ def make_yaw_report(prefix="./exps_may/ilqr/bic5D/yaw_testing/", plot_folder="./
             bbox_inches='tight', transparent=hide_label
         )
 
-        fig, axes = plt.subplots(2, 1, figsize=(5.2, 2.9))
+        fig, axes = plt.subplots(2, 2, figsize=(5.9, 3.2))
+        axes = axes.ravel()
         
         maxsteps = 0
         for idx, controls_data in enumerate(plot_actions_list):
@@ -375,14 +419,22 @@ def make_yaw_report(prefix="./exps_may/ilqr/bic5D/yaw_testing/", plot_folder="./
                              alpha = 1.0, linewidth=1.5, linestyle='solid')
                 axes[1].plot(controls_data[:, 1], label=labellist[int(idx)], c=colorlist[int(idx)], 
                              alpha = 1.0, linewidth=1.5, linestyle='solid')
+                axes[2].plot(controls_data[:, 2], label=labellist[int(idx)], c=colorlist[int(idx)], 
+                             alpha = 1.0, linewidth=1.5, linestyle='solid')
+                axes[3].plot(controls_data[:, 3], label=labellist[int(idx)], c=colorlist[int(idx)], 
+                             alpha = 1.0, linewidth=1.5, linestyle='solid')
                 axes[0].fill_between(range(nsteps), action_space[0, 0], action_space[0, 1], 
                                      where=fillarray, color='b', alpha=0.3)
                 axes[1].fill_between(range(nsteps), action_space[1, 0], action_space[1, 1], 
                                      where=fillarray, color='b', alpha=0.3)
+                axes[2].fill_between(range(nsteps), action_space[2, 0], action_space[2, 1], 
+                                     where=fillarray, color='b', alpha=0.3)
+                axes[3].fill_between(range(nsteps), action_space[3, 0], action_space[3, 1], 
+                                     where=fillarray, color='b', alpha=0.3)
 
             if not hide_label:
                 #axes[0].set_xlabel('Time index', fontsize=legend_fontsize)
-                axes[0].set_ylabel('Acceleration', fontsize=legend_fontsize)
+                axes[0].set_ylabel('Accel (fr)', fontsize=legend_fontsize)
             #axes[0].grid(True)
             axes[0].set_xticks(ticks=[], labels=[], fontsize=5, labelsize=5)
             axes[0].set_yticks(ticks=[action_space[0, 0], action_space[0, 1]], 
@@ -398,7 +450,7 @@ def make_yaw_report(prefix="./exps_may/ilqr/bic5D/yaw_testing/", plot_folder="./
 
             if not hide_label:
                 axes[1].set_xlabel('Time index', fontsize=legend_fontsize)
-                axes[1].set_ylabel('Steer control', fontsize=legend_fontsize)
+                axes[1].set_ylabel('Accel (re)', fontsize=legend_fontsize)
             #axes[1].grid(True)
             axes[1].set_xticks(ticks=[0, maxsteps], labels=[0, maxsteps], fontsize=legend_fontsize)
             axes[1].set_yticks(ticks=[action_space[1, 0], action_space[1, 1]], 
@@ -410,6 +462,37 @@ def make_yaw_report(prefix="./exps_may/ilqr/bic5D/yaw_testing/", plot_folder="./
             if hide_label:
                 axes[1].set_xticklabels([])
                 axes[1].set_yticklabels([])
+
+
+            if not hide_label:
+                axes[2].set_xlabel('Time index', fontsize=legend_fontsize)
+                axes[2].set_ylabel('Steer (fr)', fontsize=legend_fontsize)
+            #axes[1].grid(True)
+            axes[2].set_xticks(ticks=[0, maxsteps], labels=[0, maxsteps], fontsize=legend_fontsize)
+            axes[2].set_yticks(ticks=[action_space[2, 0], action_space[2, 1]], 
+                               labels=[action_space[2, 0], action_space[2, 1]], 
+                               fontsize=legend_fontsize)
+            #axes[1].legend(fontsize=legend_fontsize)
+            axes[2].yaxis.set_label_coords(-0.04, 0.5)
+            axes[2].xaxis.set_label_coords(0.5, -0.04)
+            if hide_label:
+                axes[2].set_xticklabels([])
+                axes[2].set_yticklabels([])
+
+            if not hide_label:
+                axes[3].set_xlabel('Time index', fontsize=legend_fontsize)
+                axes[3].set_ylabel('Steer (re)', fontsize=legend_fontsize)
+            #axes[1].grid(True)
+            axes[3].set_xticks(ticks=[0, maxsteps], labels=[0, maxsteps], fontsize=legend_fontsize)
+            axes[3].set_yticks(ticks=[action_space[3, 0], action_space[3, 1]], 
+                               labels=[action_space[3, 0], action_space[3, 1]], 
+                               fontsize=legend_fontsize)
+            #axes[1].legend(fontsize=legend_fontsize)
+            axes[3].yaxis.set_label_coords(-0.04, 0.5)
+            axes[3].xaxis.set_label_coords(0.5, -0.04)
+            if hide_label:
+                axes[3].set_xticklabels([])
+                axes[3].set_yticklabels([])
 
         fig.savefig(
             plot_folder + tag + str(hide_label) + "_jax_controls.pdf", dpi=200, 

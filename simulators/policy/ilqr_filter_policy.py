@@ -59,7 +59,7 @@ class iLQRSafetyFilter(iLQR):
     # Cruise policy
     start_time = time.time()
     initial_state = np.array(kwargs['state'])
-    stopping_ctrl = np.array([self.dyn.ctrl_space[0, 0], 0])
+    stopping_ctrl = np.array([self.dyn.ctrl_space[0, 0], self.dyn.ctrl_space[0, 0], 0, 0])
 
     if self.config.is_task_ilqr:
       task_ctrl, _ = self.task_policy.get_action(obs, None, **kwargs)
@@ -139,7 +139,7 @@ class iLQRSafetyFilter(iLQR):
       
       initial_control = task_ctrl
 
-      solver_initial = np.zeros((2,))
+      solver_initial = np.zeros((self.dim_u,))
       if prev_sol is not None:
         solver_initial = prev_sol['qcqp_initialize']
 
@@ -181,6 +181,7 @@ class iLQRSafetyFilter(iLQR):
           P = 0.5*(P + P.T)
           p = grad_x.T @ B0u
           # Controls improvement direction
+          #print(solver_initial)
           control_correction = barrier_filter_quadratic(P, p, scaled_c, initialize=solver_initial)
         elif self.constraint_type=='linear':
           control_correction = barrier_filter_linear(grad_x, B0, scaled_c)

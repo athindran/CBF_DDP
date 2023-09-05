@@ -23,12 +23,12 @@ def barrier_filter_quadratic(P, p, c, initialize):
 
     # Check if P is PD
     if(check_nd):
-      u = cp.Variable((2))
+      u = cp.Variable((4))
       u.value = np.array( initialize )
       P = np.array(P)
       p = np.array(p)
       
-      prob = cp.Problem( cp.Minimize(1.0*cp.square(u[0]) + 1.0*cp.square(u[1])),
+      prob = cp.Problem( cp.Minimize(1.0*cp.square(u[0]) + 1.0*cp.square(u[1]) + 1.0*cp.square(u[2]) + 1.0*cp.square(u[3])),
                     [ cp.quad_form(u, P) + p.T@u + c >=0 ] )
       try:
         prob.solve(verbose=False, warm_start=True)
@@ -36,10 +36,10 @@ def barrier_filter_quadratic(P, p, c, initialize):
         pass
     
     if(not check_nd or u[0] is None or prob.status not in ["optimal","optimal_inaccurate"]):
-      u = cp.Variable((2))
+      u = cp.Variable((4))
       u.value = np.array( initialize )
       p = np.array(p)
-      prob = cp.Problem( cp.Minimize(1.0*cp.square(u[0]) + 1.0*cp.square(u[1])),
+      prob = cp.Problem( cp.Minimize(1.0*cp.square(u[0]) + 1.0*cp.square(u[1]) + 1.0*cp.square(u[2]) + 1.0*cp.square(u[3])),
                       [ p @ u + c >= 0] )
       try:
         prob.solve(verbose=False, warm_start=True)
@@ -47,8 +47,8 @@ def barrier_filter_quadratic(P, p, c, initialize):
         pass
       
     if prob.status not in ["optimal","optimal_inaccurate"] or u[0] is None:
-      return np.array([0., 0.]) 
-    return np.array([u[0].value, u[1].value])
+      return np.array([0., 0., 0., 0.]) 
+    return np.array([u[0].value, u[1].value, u[2].value, u[3].value])
 
 # Unused as we started using iLQR task policy
 def bicycle_linear_task_policy( run_env_obs ):
