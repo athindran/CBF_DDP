@@ -1,4 +1,4 @@
-from simulators import(load_config, CarSingle5DEnv)
+from simulators import(load_config, CarIntegrator4DEnv)
 
 from matplotlib import pyplot as plt
 from matplotlib import cm
@@ -182,12 +182,12 @@ def make_yaw_report(prefix="./exps_may/ilqr/bic5D/yaw_testing/", plot_folder="./
     matplotlib.rc('xtick', labelsize=10) 
     matplotlib.rc('ytick', labelsize=10) 
 
-    hide_label = True
+    hide_label = False
 
-    legend_fontsize = 8
+    legend_fontsize = 10
     road_bounds = [road_boundary]
-    yaw_consts = [None, 0.5*np.pi, 0.4*np.pi]
-    label_yc = [None, 0.5, 0.4]
+    yaw_consts = [None]
+    label_yc = [None]
 
     suffixlist = []
     labellist = []
@@ -221,11 +221,11 @@ def make_yaw_report(prefix="./exps_may/ilqr/bic5D/yaw_testing/", plot_folder="./
                 rblist.append(rb)
 
                 if sh=='LR' and yc is None:
-                    showlist.append(False)
+                    showlist.append(True)
                 else:
                     showlist.append(True)                
             
-                if sh=='LR' and yc==0.4*np.pi:
+                if sh=='LR' and yc is None:
                     showcontrollist.append(True)
                 elif sh=='CBF' and yc is None:
                     showcontrollist.append(True)
@@ -276,7 +276,14 @@ def make_yaw_report(prefix="./exps_may/ilqr/bic5D/yaw_testing/", plot_folder="./
             filter_params.append(config_solver.SHIELD_THRESHOLD) 
 
         c_obs = 'k'
-        env = CarSingle5DEnv(config_env, config_agent, config_cost)
+        config_cost.N = config_solver.N
+        config_cost.V_MIN = config_agent.V_MIN
+        config_cost.V_MAX = config_agent.V_MAX
+        config_cost.TRACK_WIDTH_RIGHT = 1.2
+        config_cost.TRACK_WIDTH_LEFT = 1.2
+        config_env.TRACK_WIDTH_RIGHT = 1.2
+        config_env.TRACK_WIDTH_LEFT = 1.2
+        env = CarIntegrator4DEnv(config_env, config_agent, config_cost)
 
         fig, axes = plt.subplots(
             1, 1, figsize=(10.1, 2.3)
@@ -318,7 +325,7 @@ def make_yaw_report(prefix="./exps_may/ilqr/bic5D/yaw_testing/", plot_folder="./
                     else:
                         ax.plot(state_data[barrier_filter_indices, 0], state_data[barrier_filter_indices, 1], 'x', color=colorlist[int(idx)], alpha=0.7, markersize=5.0)
     
-            ax.legend(framealpha=0, fontsize=legend_fontsize, loc='upper left', ncol=4, bbox_to_anchor=(0.0, 1.35), fancybox=False, shadow=False)
+            ax.legend(framealpha=0, fontsize=legend_fontsize, loc='upper left', ncol=4, bbox_to_anchor=(0.0, 1.3), fancybox=False, shadow=False)
 
             
             if hide_label:
@@ -361,7 +368,7 @@ def make_yaw_report(prefix="./exps_may/ilqr/bic5D/yaw_testing/", plot_folder="./
 
             if not hide_label:
                 #axes[0].set_xlabel('Time index', fontsize=legend_fontsize)
-                axes[0].set_ylabel('Acceleration', fontsize=legend_fontsize)
+                axes[0].set_ylabel('Acceleration', fontsize=8)
             #axes[0].grid(True)
             axes[0].set_xticks(ticks=[], labels=[], fontsize=5, labelsize=5)
             axes[0].set_yticks(ticks=[action_space[0, 0], action_space[0, 1]], labels=[action_space[0, 0], action_space[0, 1]], fontsize=legend_fontsize)
@@ -374,7 +381,7 @@ def make_yaw_report(prefix="./exps_may/ilqr/bic5D/yaw_testing/", plot_folder="./
 
             if not hide_label:
                 #axes[1].set_xlabel('Time index', fontsize=legend_fontsize)
-                axes[1].set_ylabel('Steer control', fontsize=legend_fontsize)
+                axes[1].set_ylabel('Steer control', fontsize=8)
             #axes[1].grid(True)
             axes[1].set_xticks(ticks=[0, maxsteps], labels=[0, maxsteps], fontsize=legend_fontsize)
             axes[1].set_yticks(ticks=[action_space[1, 0], action_space[1, 1]], labels=[action_space[1, 0], action_space[1, 1]], fontsize=legend_fontsize)

@@ -16,7 +16,7 @@ import os
 os.environ["CUDA_VISIBLE_DEVICES"] = " "
 
 from simulators import(load_config, PrintLogger, IntegratorReachability2DMargin, Integrator2DCost, CarIntegrator4DEnv)
-from summary.utils import(make_animation_plots, plot_run_summary)
+from summary.utils import(make_animation_plots, plot_run_summary, make_yaw_report)
 
 jax.config.update('jax_platform_name', 'cpu')
 
@@ -198,7 +198,7 @@ def main(config_file, plot_tag, road_boundary, is_task_ilqr):
             writer.append_data(image)
             #Image(open(gif_path, 'rb').read(), width=400)
         # endregion
-  #make_yaw_report(out_folder, plot_folder='./plots_paper/', tag=plot_tag, road_boundary=road_boundary)
+  make_yaw_report(out_folder, plot_folder='./plots_paper/', tag=plot_tag, road_boundary=road_boundary)
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser()

@@ -2,7 +2,7 @@ environment:
   SEED: 0
   NUM_AGENTS: 1
   # TRACK
-  TRACK_LEN: 7
+  TRACK_LEN: 10
   # LOOP: true
   TIMEOUT: 100
   # DONE FLAG PARAM
@@ -12,8 +12,9 @@ environment:
   OBS_SPEC:
     - [2.5, 0.0, 0.25]
     - [4.5, 0.0, 0.2]
-    - [6.5, 0.0, 0.2]
-  #  - [11.0, 0.1, 0.35]
+    - [6.5, 0.1, 0.2]
+    - [6.5, -0.1, 0.2]
+    - [9.0, 0.1, 0.3]
   RESET_SPACE:
     - [0., 8.0]
     - [-0.4, 0.4]
@@ -35,7 +36,7 @@ cost:
   # Safety DDP parameters
   COST_TYPE: Reachability
   # SAFETY COST PARAM
-  W_ACCEL: 0.0001
+  W_ACCEL: 0.00001
 
 agent:
   AGENT_ID: ego
@@ -48,14 +49,14 @@ agent:
   # CAR DYNAMICS
   DT: 0.05
   #VMIN should be zero
-  V_MIN: 0.1
+  V_MIN: 0.0
   V_MAX: 2.0
 
 solver:
   INIT_STATE: [0.0, 0.0, 0.6, 0.0] 
   N: 50
   MAX_ITER: 25
-  MAX_ITER_RECEDING: 150
+  MAX_ITER_RECEDING: 350
   # Line search options: 'baseline'.
   LINE_SEARCH: 'baseline'
   # Filter options: 'none', 'LR', 'CBF'
