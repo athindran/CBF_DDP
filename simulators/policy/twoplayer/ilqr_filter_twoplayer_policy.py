@@ -66,11 +66,13 @@ class iLQRSafetyFilter(iLQR):
     # Find safe policy from step 0 
     if prev_sol is not None:
       controls_initialize = jnp.array( prev_sol['reinit_controls'] )
+      dists_initialize = jnp.array(prev_sol['reinit_dists'])
     else:
       controls_initialize = None
+      dists_initialize = None
     
     if prev_sol is None or prev_sol['resolve']:
-      control_0, solver_info_0 = self.solver_0.get_action(obs, controls_initialize, **kwargs)
+      control_0, solver_info_0 = self.solver_0.get_action(obs, controls_initialize, disturbances=dists_initialize, **kwargs)
     else:
       # Potential source of acceleration. We don't need to resolve both ILQs as we can reuse 
       # solution from previous time. - Unused currently.
@@ -91,9 +93,12 @@ class iLQRSafetyFilter(iLQR):
     )
     kwargs['state'] = jnp.array( state_imaginary )
     boot_controls = jnp.array( solver_info_0['controls'] )
+    boot_dists = jnp.array( solver_info_0['disturbances'] )
 
-    _, solver_info_1 = self.solver_1.get_action(state_imaginary, boot_controls, **kwargs)
+    _, solver_info_1 = self.solver_1.get_action(state_imaginary, controls=boot_controls, disturbances=boot_dists,
+                                                 **kwargs)
     boot_controls = jnp.array( solver_info_1['controls'] )
+    boot_dists = jnp.array( solver_info_1['disturbances'] ) 
     
     solver_info_0['Vopt_next'] = solver_info_1['Vopt']
     solver_info_0['marginopt_next'] = solver_info_1['marginopt']
@@ -110,6 +115,12 @@ class iLQRSafetyFilter(iLQR):
         # Warm start for next cycle
         solver_info_0['reinit_controls'] = solver_info_0['reinit_controls'].at[:, 0:self.N-1].set(solver_info_0['controls'][:, 1:self.N])
         solver_info_0['reinit_controls'] = solver_info_0['reinit_controls'].at[:, -1].set(self.dyn.ctrl_space[0, 0])
+        
+        solver_info_0['reinit_dists'] = jnp.zeros((self.dim_d, self.N))
+        # Warm start for next cycle
+        solver_info_0['reinit_dists'] = solver_info_0['reinit_dists'].at[:, 0:self.N-1].set(solver_info_0['disturbances'][:, 1:self.N])
+        solver_info_0['reinit_dists'] = solver_info_0['reinit_dists'].at[:, -1].set(0)
+
         solver_info_0['mark_complete_filter'] = True
         solver_info_0['num_iters'] = 0
         solver_info_0['deviation'] = np.linalg.norm(control_0 - task_ctrl, ord=1)
@@ -125,6 +136,7 @@ class iLQRSafetyFilter(iLQR):
         solver_info_0['resolve'] = True
         solver_info_0['bootstrap_next_solution'] = solver_info_1
         solver_info_0['reinit_controls'] = jnp.array( solver_info_1['controls'] )
+        solver_info_0['reinit_dists'] = jnp.array( solver_info_1['disturbances'] )
         solver_info_0['reinit_states'] = jnp.array( solver_info_1['states'] )
         solver_info_0['num_iters'] = 0
         solver_info_0['deviation'] = 0
@@ -193,6 +205,7 @@ class iLQRSafetyFilter(iLQR):
         kwargs['state'] = np.array(state_imaginary)  
         _, solver_info_1 = self.solver_2.get_action(state_imaginary, 
                                                     controls=jnp.array( solver_info_1['controls'] ), 
+                                                    disturbances=jnp.array( solver_info_1['disturbances']),
                                                     **kwargs)
         solver_info_0['Vopt_next'] = solver_info_1['Vopt']
         solver_info_0['marginopt_next'] = solver_info_1['marginopt']
@@ -214,6 +227,7 @@ class iLQRSafetyFilter(iLQR):
         solver_info_0['resolve'] = False
         solver_info_0['bootstrap_next_solution'] = solver_info_1
         solver_info_0['reinit_controls'] = jnp.array( solver_info_1['controls'] )
+        solver_info_0['reinit_dists'] = jnp.array( solver_info_1['disturbances'] )
         solver_info_0['reinit_states'] = jnp.array( solver_info_1['states'] )
         #solver_info_0['reinit_J'] = solver_info_1['Vopt'] 
         solver_info_0['num_iters'] = num_iters
@@ -233,6 +247,12 @@ class iLQRSafetyFilter(iLQR):
       solver_info_0['controls'][:, 1:self.N])
     solver_info_0['reinit_controls'] = solver_info_0['reinit_controls'].at[:, -1].set(
       self.dyn.ctrl_space[0, 0])    
+    
+    solver_info_0['reinit_dists'] = jnp.zeros((self.dim_d, self.N))
+    solver_info_0['reinit_dists'] = solver_info_0['reinit_dists'].at[:, 0:self.N-1].set(
+      solver_info_0['disturbances'][:, 1:self.N])
+    solver_info_0['reinit_dists'] = solver_info_0['reinit_dists'].at[:, -1].set(0)  
+    
     solver_info_0['mark_complete_filter'] = True
     solver_info_0['deviation'] = np.linalg.norm(control_0 - task_ctrl)
     if solver_info_0['is_inside_target']:

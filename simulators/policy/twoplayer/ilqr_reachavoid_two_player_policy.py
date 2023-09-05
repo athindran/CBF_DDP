@@ -82,8 +82,13 @@ class iLQRReachAvoidGame(iLQR):
       assert controls.shape[1] == self.N
       controls = jnp.array(controls)
     
-    disturbances = np.zeros((self.dim_d, self.N))
-    disturbances = jnp.array(disturbances)
+    if kwargs['disturbances'] is None:
+      disturbances = np.zeros((self.dim_d, self.N))
+      disturbances = jnp.array(disturbances)
+    else:
+      disturbances = kwargs['disturbances']
+      assert disturbances.shape[1] == self.N
+      disturbances = jnp.array(disturbances)
 
     # Rolls out the nominal trajectory and gets the initial cost.
     states, controls, disturbances = self.rollout_nominal(
@@ -136,29 +141,34 @@ class iLQRReachAvoidGame(iLQR):
       #print("Initial", J)
       J_init = jnp.array( J )
       alpha_chosen_1, J , J_new = self.trust_region_search_conservative( states, controls, disturbances, Ks1, ks1, 
-                                                                        jnp.zeros(Ks2.shape), jnp.zeros(ks2.shape), J,
+                                                                        Ks2, jnp.zeros(ks2.shape), J,
                                                           critical=critical, c_x=c_x, c_xx=c_xx, 
                                                           alpha_init=1.0, alpha_opponent=self.min_alpha, adversary=False)
       #print("Player 1", J, J_new, alpha_chosen_1)
 
-      alpha_chosen_2, J, J_new = self.trust_region_search_conservative( states, controls, disturbances, Ks1, ks1, Ks2, ks2, J=jnp.array(J_new),
+      alpha_chosen_2 = 0
+      if J_new>J:
+        alpha_chosen_2, J, J_new = self.trust_region_search_conservative( states, controls, disturbances, Ks1, ks1, Ks2, ks2, J=jnp.array(J_new),
                                                           critical=critical, c_x=c_x, c_xx=c_xx, 
                                                           alpha_init=1.0, alpha_opponent=alpha_chosen_1, adversary=True)
-      #print("Player 2", J, J_new, alpha_chosen_2)
-      if J_new<J:
-        alpha_chosen_2 = max(alpha_chosen_2, self.min_alpha)
-        (states, controls, disturbances, J_new, critical, failure_margins, target_margins, 
+        #print("Player 2", J, J_new, alpha_chosen_2)
+        
+        if J_new<J:
+          alpha_chosen_2 = max(alpha_chosen_2, self.min_alpha)
+        else:
+          alpha_chosen_2 = self.min_alpha
+        
+      (states, controls, disturbances, J_new, critical, failure_margins, target_margins, 
               reachavoid_margin, c_x_t, c_xx_t, c_u_t, c_uu_t, _, _) = self.forward_pass(states, controls, disturbances, 
                                                                                   Ks1, ks1, Ks2, ks2, 
                                                                                   alpha_1=alpha_chosen_1,
                                                                                   alpha_2=alpha_chosen_2)
-      else:
-        (states, controls, disturbances, J_new, critical, failure_margins, target_margins, 
-              reachavoid_margin, c_x_t, c_xx_t, c_u_t, c_uu_t, _, _) = self.forward_pass(states, controls, disturbances, 
-                                                                                  Ks1, ks1, jnp.zeros(Ks2.shape), jnp.zeros(ks2.shape),
-                                                                                  alpha_1=alpha_chosen_1,
-                                                                                  alpha_2=alpha_chosen_2)
-
+      #else:
+      #  (states, controls, disturbances, J_new, critical, failure_margins, target_margins, 
+      #        reachavoid_margin, c_x_t, c_xx_t, c_u_t, c_uu_t, _, _) = self.forward_pass(states, controls, disturbances, 
+      #                                                                            Ks1, ks1, jnp.zeros(Ks2.shape), jnp.zeros(ks2.shape),
+      #                                                                            alpha_1=alpha_chosen_1,
+      #                                                                            alpha_2=alpha_chosen_2)
 
       if (np.abs((J_init-J_new) / J_init) < self.tol):  # Small improvement.
         status = 1

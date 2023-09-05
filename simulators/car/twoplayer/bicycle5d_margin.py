@@ -157,7 +157,7 @@ class Bicycle5DConstraintMargin( BaseMargin ):
     self.plan_dyn = plan_dyn
     
     self.stopping_length = 25
-    self.disturbance_margin = self.stopping_length*0.01*self.plan_dyn.dt*jnp.sqrt(2)
+    self.disturbance_margin = 0.05
     print('Margin allowance for disturbance in stopping path: ', self.disturbance_margin)
 
     self.dim_x = plan_dyn.dim_x

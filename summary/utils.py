@@ -182,8 +182,10 @@ def make_yaw_report(prefix="./exps_may/ilqr/bic5D/yaw_testing/", plot_folder="./
 
     legend_fontsize = 8
     road_bounds = [road_boundary]
-    yaw_consts = [None, 0.5*np.pi, 0.4*np.pi]
-    label_yc = [None, 0.5, 0.4]
+    yaw_consts = [None]
+    label_yc = [None]
+    #yaw_consts = [None, 0.5*np.pi, 0.4*np.pi]
+    #label_yc = [None, 0.5, 0.4]
 
     suffixlist = []
     labellist = []
@@ -220,11 +222,11 @@ def make_yaw_report(prefix="./exps_may/ilqr/bic5D/yaw_testing/", plot_folder="./
                 rblist.append(rb)
 
                 if sh=='LR' and yc is None:
-                    showlist.append(False)
+                    showlist.append(True)
                 else:
                     showlist.append(True)                
             
-                if sh=='LR' and yc==0.4*np.pi:
+                if sh=='LR' and yc is None:
                     showcontrollist.append(True)
                 elif sh=='CBF' and yc is None:
                     showcontrollist.append(True)

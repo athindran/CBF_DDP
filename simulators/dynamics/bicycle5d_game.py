@@ -55,11 +55,11 @@ class Bicycle5DGame(BaseDynamics):
       self, state: DeviceArray, control: DeviceArray, disturbance: DeviceArray
   ) -> DeviceArray:
     deriv = jnp.zeros((self.dim_x,))
-    deriv = deriv.at[0].set(state[2] * jnp.cos(state[3])) + disturbance[0]
-    deriv = deriv.at[1].set(state[2] * jnp.sin(state[3])) + disturbance[1]
-    deriv = deriv.at[2].set(control[0])
+    deriv = deriv.at[0].set(state[2] * jnp.cos(state[3])) 
+    deriv = deriv.at[1].set(state[2] * jnp.sin(state[3])) 
+    deriv = deriv.at[2].set(control[0] + disturbance[0])
     deriv = deriv.at[3].set(state[2] * jnp.tan(state[4]) / self.wheelbase)
-    deriv = deriv.at[4].set(control[1])
+    deriv = deriv.at[4].set(control[1] + disturbance[1])
     return deriv
 
   @partial(jax.jit, static_argnames='self')
@@ -139,11 +139,11 @@ class Bicycle5DGame(BaseDynamics):
   def get_jacobian_fd(
       self, obs: DeviceArray, control: DeviceArray
   ) -> DeviceArray: 
-      Dc = np.array([[1, 0],
-                      [0, 1],
+      Dc = np.array([[0, 0],
                       [0, 0],
+                      [1, 0],
                       [0, 0],
-                      [0, 0]])
+                      [0, 1]])
       
       Dd = self.dt * Dc
 
@@ -170,11 +170,11 @@ class Bicycle5DGame(BaseDynamics):
                       [0, 0],
                       [0, 1]])
       
-      Dc = np.array([[1, 0],
-                      [0, 1],
+      Dc = np.array([[0, 0],
                       [0, 0],
+                      [1, 0],
                       [0, 0],
-                      [0, 0]])
+                      [0, 1]])
             
       Ad = jnp.eye(self.dim_x) + Ac*self.dt + 0.5*Ac@Ac*self.dt*self.dt
       Bd = self.dt * Bc

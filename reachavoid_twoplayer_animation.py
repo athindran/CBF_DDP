@@ -65,7 +65,7 @@ def main(config_file, plot_tag, road_boundary, is_task_ilqr):
 
   # region: Runs iLQR
   # Warms up jit
-  _, solver_info = env.agent.policy.get_action(obs=x_cur, state=x_cur, warmup=True)
+  _, solver_info = env.agent.policy.get_action(obs=x_cur, state=x_cur, warmup=True, disturbances=None)
   
   states = solver_info['states']
   actions = solver_info['controls']
