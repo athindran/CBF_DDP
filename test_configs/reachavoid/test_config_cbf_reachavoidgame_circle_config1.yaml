@@ -2,7 +2,7 @@ environment:
   SEED: 0
   NUM_AGENTS: 1
   # TRACK
-  TRACK_LEN: 12
+  TRACK_LEN: 10
   # LOOP: true
   TIMEOUT: 100
   # DONE FLAG PARAM
@@ -15,7 +15,7 @@ environment:
     - [6.5, 0.0, 0.25]
     - [8.5, 0.7, 0.25]
     - [8.5, -0.7, 0.25]
-    - [11.0, 0.1, 0.35]
+  #  - [11.0, 0.1, 0.35]
   RESET_SPACE:
     - [0., 8.0]
     - [-0.4, 0.4]
@@ -69,8 +69,8 @@ agent:
   # CAR DYNAMICS
   WHEELBASE: 0.2
   DT: 0.05
-  DELTA_MIN: -1.2  # rad
-  DELTA_MAX: 1.2
+  DELTA_MIN: -1.0  # rad
+  DELTA_MAX: 1.0
   #VMIN should be zero
   V_MIN: 0.0
   V_MAX: 2.0
@@ -85,7 +85,7 @@ solver:
   # Shielding options: 'none', 'LR', 'CBF'
   FILTER_TYPE: 'CBF'
   CBF_TYPE: 'quadratic'
-  BARRIER_GAMMA: 0.9
+  BARRIER_GAMMA: 0.93
   LR_THRESHOLD: 0.0
   OUT_FOLDER: exps_may/ilqr/bic5D/reachavoid_yaw_experiment_config1_game/
   DEVICE: cpu

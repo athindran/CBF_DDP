@@ -215,7 +215,7 @@ class Bicycle5DConstraintMargin( BaseMargin ):
 
     for _obs_constraint in self.obs_constraint:
       _obs_constraint: BaseMargin
-      cost = jnp.minimum(cost, _obs_constraint.get_stage_margin(state, ctrl, dist))
+      cost = jnp.minimum(cost, _obs_constraint.get_stage_margin(state, ctrl, dist) - self.disturbance_margin)
 
     if self.use_yaw:
       cost = jnp.minimum(cost, self.yaw_min_cost.get_stage_margin(
@@ -228,7 +228,7 @@ class Bicycle5DConstraintMargin( BaseMargin ):
         )
       )
     
-    cost = cost - self.disturbance_margin
+    #cost = cost - self.disturbance_margin
 
     return cost
 
@@ -271,7 +271,7 @@ class Bicycle5DConstraintMargin( BaseMargin ):
             _obs_constraint: BaseMargin
             target_cost = jnp.minimum(target_cost,  _obs_constraint.get_stage_margin(
                 current_state, stopping_ctrl, dist
-            )) 
+            ) - self.disturbance_margin)
              
       current_state, _, _ = self.plan_dyn.integrate_forward_jax(current_state, stopping_ctrl, jnp.zeros((2, )))   
 
@@ -293,7 +293,8 @@ class Bicycle5DConstraintMargin( BaseMargin ):
 
     iters, _, _, target_cost, _ = roll_forward((iters, current_state, stopping_ctrl, target_cost, v_min))
 
-    return target_cost - self.disturbance_margin
+    return target_cost
+    #- self.disturbance_margin
 
   @partial(jax.jit, static_argnames='self')
   def get_target_stage_margin_with_derivatives(
@@ -330,7 +331,7 @@ class Bicycle5DConstraintMargin( BaseMargin ):
 
       for _obs_constraint in self.obs_constraint:
         _obs_constraint: BaseMargin
-        new_cost = _obs_constraint.get_stage_margin( current_state, stopping_ctrl, dist)
+        new_cost = _obs_constraint.get_stage_margin( current_state, stopping_ctrl, dist) - self.disturbance_margin
         c_x_new = _obs_constraint.get_cx(current_state[:, jnp.newaxis], stopping_ctrl[:, jnp.newaxis], dist[:, jnp.newaxis])
         c_xx_new = _obs_constraint.get_cxx(current_state[:, jnp.newaxis], stopping_ctrl[:, jnp.newaxis], dist[:, jnp.newaxis])
         target_cost, c_x_target, c_xx_target, pinch_point = jax.lax.cond(new_cost<target_cost, true_fn, false_fn, 
@@ -411,7 +412,7 @@ class Bicycle5DConstraintMargin( BaseMargin ):
     c_x_target = jacobian.T @ c_x_target
     c_xx_target = jacobian.T @ c_xx_target @ jacobian
 
-    return target_cost - self.disturbance_margin, c_x_target, c_xx_target
+    return target_cost, c_x_target, c_xx_target
 
   @partial(jax.jit, static_argnames='self')
   def get_cost_dict(
