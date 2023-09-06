@@ -161,6 +161,7 @@ class iLQRSafetyFilter(iLQR):
       kappa = 1.2
 
       # Exit loop once CBF constraint satisfied or maximum iterations violated
+      bias_term = np.zeros((2,))
       while((constraint_violation<cbf_tol or warmup) and num_iters<5):
         num_iters= num_iters + 1
 
@@ -181,10 +182,13 @@ class iLQRSafetyFilter(iLQR):
           P = 0.5*(P + P.T)
           p = grad_x.T @ B0u
           # Controls improvement direction
-          control_correction = barrier_filter_quadratic(P, p, scaled_c, initialize=solver_initial)
+          #limits = np.array( [[self.dyn.ctrl_space[0, 0] - initial_control[0], self.dyn.ctrl_space[0, 1] - initial_control[0]],
+          #          [self.dyn.ctrl_space[1, 0] - initial_control[1], self.dyn.ctrl_space[1, 1] - initial_control[1]]] )
+          control_correction = barrier_filter_quadratic( P, p, scaled_c, initialize=solver_initial, bias_term=bias_term )
         elif self.constraint_type=='linear':
           control_correction = barrier_filter_linear(grad_x, B0, scaled_c)
 
+        bias_term = bias_term + control_correction
         filtered_control = initial_control + np.array( control_correction )
 
         # Restart from current point and run again

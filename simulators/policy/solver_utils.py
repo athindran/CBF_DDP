@@ -13,7 +13,7 @@ def barrier_filter_linear(grad_x, B0, c):
   p = grad_x.T @ B0
   return -c*p/(jnp.dot(p, p))
 
-def barrier_filter_quadratic(P, p, c, initialize): 
+def barrier_filter_quadratic(P, p, c, initialize, bias_term=np.zeros((2,))): 
     def is_neg_def(x):
       # Check if a matrix is PSD
       return np.all( np.real( np.linalg.eigvals(x) ) < 0) 
@@ -28,8 +28,8 @@ def barrier_filter_quadratic(P, p, c, initialize):
       P = np.array(P)
       p = np.array(p)
       
-      prob = cp.Problem( cp.Minimize(1.0*cp.square(u[0]) + 1.0*cp.square(u[1])),
-                    [ cp.quad_form(u, P) + p.T@u + c >=0 ] )
+      prob = cp.Problem( cp.Minimize(1.0*cp.square(u[0] + bias_term[0]) + 1.0*cp.square(u[1]  + bias_term[1])),
+                    [ cp.quad_form(u, P) + p.T@u + c >=0] )
       try:
         prob.solve(verbose=False, warm_start=True)
       except SolverError:
@@ -39,7 +39,7 @@ def barrier_filter_quadratic(P, p, c, initialize):
       u = cp.Variable((2))
       u.value = np.array( initialize )
       p = np.array(p)
-      prob = cp.Problem( cp.Minimize(1.0*cp.square(u[0]) + 1.0*cp.square(u[1])),
+      prob = cp.Problem( cp.Minimize(1.0*cp.square(u[0] + bias_term[0]) + 1.0*cp.square(u[1]  + bias_term[1])),
                       [ p @ u + c >= 0] )
       try:
         prob.solve(verbose=False, warm_start=True)
