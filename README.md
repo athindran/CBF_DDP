@@ -59,6 +59,9 @@ python test_yaw_constraints.py -cf ./test_configs/reachavoid/test_config_cbf_rea
 python test_yaw_constraints.py -cf ./test_configs/reachavoid/test_config_cbf_reachavoid_circle_config2.yaml --naive_task -pt reachavoidcf2_naive_task_squeeze -rb 1.0
 python test_yaw_constraints.py -cf ./test_configs/reachavoid/test_config_cbf_reachavoid_circle_config2.yaml -pt reachavoidcf2_lqr_task_squeeze -rb 1.0
 ```
+## Acknowledgement
 
+This code is based upon previous codebase of Safe Robotics Lab in Princeton University. 
+https://saferobotics.princeton.edu/
 
 
