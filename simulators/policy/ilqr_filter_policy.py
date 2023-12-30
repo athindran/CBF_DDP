@@ -9,10 +9,8 @@ import numpy as np
 from .ilqr_reachavoid_policy import iLQRReachAvoid
 from .ilqr_policy import iLQR
 from .solver_utils import barrier_filter_linear, barrier_filter_quadratic, bicycle_linear_task_policy
-
-from ..dynamics.base_dynamics import BaseDynamics
-from ..costs.base_margin import BaseMargin
-
+from simulators.dynamics.base_dynamics import BaseDynamics
+from simulators.costs.base_margin import BaseMargin
 
 class iLQRSafetyFilter(iLQR):
 
@@ -51,7 +49,7 @@ class iLQRSafetyFilter(iLQR):
                 self.task_cost)
         else:
             self.task_policy = bicycle_linear_task_policy
-        # Two ILQ solvers
+        # Two ILQR solvers
         if self.config.COST_TYPE == "Reachavoid":
             self.solver_0 = iLQRReachAvoid(
                 self.id, self.config, self.rollout_dyn_0, self.cost)
@@ -65,7 +63,7 @@ class iLQRSafetyFilter(iLQR):
         prev_sol: Optional[Dict] = None, warmup=False, **kwargs
     ) -> np.ndarray:
 
-        # Cruise policy
+        # Linear feedback policy
         start_time = time.time()
         initial_state = np.array(kwargs['state'])
         stopping_ctrl = np.array([self.dyn.ctrl_space[0, 0], 0])
@@ -88,11 +86,8 @@ class iLQRSafetyFilter(iLQR):
             # Potential source of acceleration. We don't need to resolve both ILQs as we can reuse
             # solution from previous time. - Unused currently.
             solver_info_0 = prev_sol['bootstrap_next_solution']
-            control_0 = solver_info_0['controls'][:,
-                                                  0] + solver_info_0['K_closed_loop'][:,
-                                                                                      :,
-                                                                                      0] @ (initial_state - solver_info_0['states'][:,
-                                                                                                                                    0])
+            control_0 = (solver_info_0['controls'][:, 0] 
+                            + solver_info_0['K_closed_loop'][:, :, 0] @ (initial_state - solver_info_0['states'][:, 0]))
             # Closed loop solution
             #solver_info_0['controls'] = jnp.array( solver_info_0['reinit_controls'] )
             #solver_info_0['states'] = jnp.array( solver_info_0['reinit_states'] )
@@ -152,7 +147,6 @@ class iLQRSafetyFilter(iLQR):
                     solver_info_1['states'])
                 solver_info_0['num_iters'] = 0
                 solver_info_0['deviation'] = 0
-                #print("Filtered control task", task_ctrl)
                 return task_ctrl, solver_info_0
         elif(self.filter_type == "CBF"):
             gamma = self.gamma
@@ -184,7 +178,7 @@ class iLQRSafetyFilter(iLQR):
 
             # Exit loop once CBF constraint satisfied or maximum iterations
             # violated
-            bias_term = np.zeros((2,))
+            control_bias_term = np.zeros((2,))
             while((constraint_violation < cbf_tol or warmup) and num_iters < 5):
                 num_iters = num_iters + 1
 
@@ -210,12 +204,12 @@ class iLQRSafetyFilter(iLQR):
                     # limits = np.array( [[self.dyn.ctrl_space[0, 0] - initial_control[0], self.dyn.ctrl_space[0, 1] - initial_control[0]],
                     #          [self.dyn.ctrl_space[1, 0] - initial_control[1], self.dyn.ctrl_space[1, 1] - initial_control[1]]] )
                     control_correction = barrier_filter_quadratic(
-                        P, p, scaled_c, initialize=solver_initial, bias_term=bias_term)
+                        P, p, scaled_c, initialize=solver_initial, control_bias_term=control_bias_term)
                 elif self.constraint_type == 'linear':
                     control_correction = barrier_filter_linear(
                         grad_x, B0, scaled_c)
 
-                bias_term = bias_term + control_correction
+                control_bias_term = control_bias_term + control_correction
                 filtered_control = initial_control + \
                     np.array(control_correction)
 
