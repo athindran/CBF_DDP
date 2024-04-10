@@ -403,7 +403,7 @@ def make_yaw_report(prefix="./exps_may/ilqr/bic5D/yaw_testing/", plot_folder="./
                 axes[1].set_xlabel('Time (s)', fontsize=legend_fontsize)
                 axes[1].set_ylabel('Steer control', fontsize=legend_fontsize)
             #axes[1].grid(True)
-            axes[1].set_xticks(ticks=[0, dt*maxsteps], labels=[0, dt*maxsteps], fontsize=legend_fontsize)
+            axes[1].set_xticks(ticks=[0, round(dt*maxsteps, 2)], labels=[0, round(dt*maxsteps, 2)], fontsize=legend_fontsize)
             axes[1].set_yticks(ticks=[action_space[1, 0], action_space[1, 1]], 
                                labels=[action_space[1, 0], action_space[1, 1]], 
                                fontsize=legend_fontsize)
@@ -438,7 +438,7 @@ def make_yaw_report(prefix="./exps_may/ilqr/bic5D/yaw_testing/", plot_folder="./
                                      where=fillarray, color='b', alpha=0.3)
             ax_v.plot(x_times, 0*x_times, 'k--', linewidth=1.0)
 
-    ax_v.set_xticks(ticks=[0, dt*maxsteps], labels=[0, dt*maxsteps], fontsize=legend_fontsize)
+    ax_v.set_xticks(ticks=[0, round(dt*maxsteps, 2)], labels=[0, round(dt*maxsteps, 2)], fontsize=legend_fontsize)
     ax_v.set_yticks(ticks=[0, 1.2], 
                         labels=[0, 1.2], 
                         fontsize=legend_fontsize)
