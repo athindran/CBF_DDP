@@ -114,7 +114,7 @@ def main(config_file, plot_tag, road_boundary, is_task_ilqr):
   def rollout_episode_callback(
       env, state_history, action_history, plan_history, step_history, *args, **kwargs
   ):
-    plot_run_summary(dyn_id, env, state_history, action_history, config_solver, fig_folder, **kwargs)
+    plot_run_summary(dyn_id, env, state_history, action_history, config_solver, config_agent, fig_folder, **kwargs)
     save_dict = {'states': state_history, 'actions': action_history, "values": kwargs["value_history"], "process_times": kwargs["process_time_history"]
                  , "barrier_indices": kwargs["barrier_filter_indices"], "complete_indices": kwargs["complete_filter_indices"], 'deviation_history': kwargs['deviation_history']}
     np.save(os.path.join(fig_folder, "save_data.npy"), save_dict)
@@ -201,6 +201,7 @@ def main(config_file, plot_tag, road_boundary, is_task_ilqr):
             writer.append_data(image)
             #Image(open(gif_path, 'rb').read(), width=400)
         # endregion
+  
   make_yaw_report(out_folder, plot_folder='./plots_paper/', tag=plot_tag, road_boundary=road_boundary)
 
 if __name__ == "__main__":

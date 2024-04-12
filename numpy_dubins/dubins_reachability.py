@@ -86,7 +86,7 @@ env.track_length = 4.5
 
 marginFunc = ReachabilityMarginFunction3D( ego_radius=ego_radius, obstacles=obstacle_list, obstacle_radius=obstacle_radius )
 
-run = False
+run = True
 
 if run:
     solver_dict_hcbf = run_heuristic_cbf(env, dubins_task_policy, marginFunc, max_steps)
@@ -121,7 +121,7 @@ else:
     solver_dict_lr_1 = pickle.load( open("./dubins_plots_animate/lrddp.pkl", "rb") )
 
 plotting=True
-show_label = False
+show_label = True
 fig, ax = plt.subplots(1, 2, figsize=(6.4, 3.0), gridspec_kw={'height_ratios': [1]})
 if plotting:
     plot_dubins_trajectory(fig, ax[0], [ solver_dict_hcbf, solver_dict_barrier_1, solver_dict_lr_1 ], obstacle_list=obstacle_list, obstacle_radius=obstacle_radius,
