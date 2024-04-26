@@ -126,7 +126,7 @@ def main(config_file, plot_tag, road_boundary, is_task_ilqr):
 
   end_criterion = "failure"
 
-  yaw_constraints = [0.4*np.pi]
+  yaw_constraints = [None, 0.5*np.pi, 0.4*np.pi]
 
   out_folder = config_solver.OUT_FOLDER
 
@@ -165,7 +165,7 @@ def main(config_file, plot_tag, road_boundary, is_task_ilqr):
         config_current_cost.TRACK_WIDTH_LEFT = road_boundary
         env.visual_extent[2] = -road_boundary
         env.visual_extent[3] = road_boundary
-        cost = BicycleReachAvoid5DMargin(config_current_cost, copy.deepcopy(env.agent.dyn))
+        cost = Bicycle5DSoftReachabilityMargin(config_current_cost, copy.deepcopy(env.agent.dyn))
         env.cost = cost
         env.agent.init_policy(
           policy_type=policy_type, config=config_solver, cost=cost, task_cost=task_cost

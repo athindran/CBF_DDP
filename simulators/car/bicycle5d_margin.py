@@ -489,7 +489,7 @@ class Bicycle5DSoftMinConstraintMargin( BaseMargin ):
 
     self.dim_x = plan_dyn.dim_x
     self.dim_u = plan_dyn.dim_u
-    self.kappa = 1e-6
+    self.kappa = 15.0
 
     self.obs_constraint = []
     if self.obsc_type=='circle':
@@ -926,9 +926,9 @@ class Bicycle5DSoftReachabilityMargin(BaseMargin):
             state, ctrl
         )
 
-        ctrl_costs = self.ctrl_cost.get_stage_margin(state, ctrl)
+        ctrl_costs = self.ctrl_cost.get_mapped_margin(state, ctrl)
         # TODO: critical points version
 
-        return (jnp.min(state_costs[1:]) + jnp.sum(ctrl_costs)).astype(float)
+        return (jnp.sum(state_costs) + jnp.sum(ctrl_costs)).astype(float)
 
 

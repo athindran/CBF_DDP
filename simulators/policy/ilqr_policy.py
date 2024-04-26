@@ -59,7 +59,7 @@ class iLQR(BasePolicy):
       # jacobian from 0 to N-2.
       c_x, c_u, c_xx, c_uu, c_ux = self.cost.get_derivatives(states, controls)
       fx, fu = self.dyn.get_jacobian(states[:, :-1], controls[:, :-1])
-      K_closed_loop, k_open_loop = self.backward_pass(
+      V_x, V_xx, K_closed_loop, k_open_loop = self.backward_pass(
           c_x=c_x, c_u=c_u, c_xx=c_xx, c_uu=c_uu, c_ux=c_ux, fx=fx, fu=fu
       )
       updated = False
@@ -96,7 +96,9 @@ class iLQR(BasePolicy):
     k_open_loop = np.asarray(k_open_loop)
     solver_info = dict(
         states=states, controls=controls, K_closed_loop=K_closed_loop,
-        k_open_loop=k_open_loop, t_process=t_process, status=status, J=J
+        k_open_loop=k_open_loop, t_process=t_process, status=status, J=J,
+        Vopt=J, marginopt=J,
+        grad_x=V_x, grad_xx=V_xx, B0=fu[:, :, 0]
     )
     return controls[:, 0], solver_info
 
@@ -212,4 +214,4 @@ class iLQR(BasePolicy):
     V_x, V_xx, ks, Ks = jax.lax.fori_loop(
         0, self.N - 1, backward_pass_looper, (V_x, V_xx, ks, Ks)
     )
-    return Ks, ks
+    return V_x, V_xx, Ks, ks

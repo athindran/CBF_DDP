@@ -73,16 +73,16 @@ agent:
 solver:
   INIT_STATE: [0.0, 0.0, 0.6, 0.0, 0.0]
   N: 45
-  MAX_ITER: 20
+  MAX_ITER: 25 
   MAX_ITER_RECEDING: 360
   # Line search options: 'baseline'.
   LINE_SEARCH: 'baseline'
   # Shielding options: 'none', 'LR', 'CBF'
   FILTER_TYPE: 'CBF'
-  CBF_TYPE: 'quadratic'
+  CBF_TYPE: 'linear'
   BARRIER_GAMMA: 0.9
   LR_THRESHOLD: 0.0
-  OUT_FOLDER: exps_may/ilqr/bic5D/reachavoid_yaw_experiment_config1/
+  OUT_FOLDER: exps_may/ilqr/bic5D/reachavoid_yaw_experiment_config1_linear/
   DEVICE: cpu
   FIG_SIZE_X: 8
   FIG_SIZE_Y: 2.5
