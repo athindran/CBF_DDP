@@ -6,7 +6,7 @@ from .base_single_env import BaseSingleEnv
 
 from .car.car_single import CarSingle5DEnv
 from .car.bicycle5d_margin import (
-    BicycleReachAvoid5DMargin, Bicycle5DCost
+    BicycleReachAvoid5DMargin, Bicycle5DCost, Bicycle5DSoftReachabilityMargin
 )
 
 from .costs.quadratic_penalty import QuadraticCost

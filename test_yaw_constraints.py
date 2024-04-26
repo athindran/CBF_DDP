@@ -16,7 +16,7 @@ import jax
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = " "
 
-from simulators import(load_config, CarSingle5DEnv, BicycleReachAvoid5DMargin, PrintLogger, Bicycle5DCost)
+from simulators import(load_config, CarSingle5DEnv, BicycleReachAvoid5DMargin, Bicycle5DSoftReachabilityMargin, PrintLogger, Bicycle5DCost)
 from summary.utils import(make_animation_plots, make_yaw_report, plot_run_summary)
 
 jax.config.update('jax_platform_name', 'cpu')
@@ -67,11 +67,11 @@ def main(config_file, plot_tag, road_boundary, is_task_ilqr):
   elif config_cost.COST_TYPE == "Reachability":
     if config_solver.FILTER_TYPE == "none":
       policy_type = "iLQRReachability"
-      cost = BicycleReachAvoid5DMargin(config_ilqr_cost, copy.deepcopy(env.agent.dyn))
+      cost = Bicycle5DSoftReachabilityMargin(config_ilqr_cost, copy.deepcopy(env.agent.dyn))
       env.cost = cost  #! hacky
     else:
       policy_type = "iLQRSafetyFilter"
-      cost = BicycleReachAvoid5DMargin(config_ilqr_cost, copy.deepcopy(env.agent.dyn))
+      cost = Bicycle5DSoftReachabilityMargin(config_ilqr_cost, copy.deepcopy(env.agent.dyn))
       task_cost = Bicycle5DCost(config_ilqr_cost, copy.deepcopy(env.agent.dyn))
       env.cost = cost
 
@@ -126,7 +126,7 @@ def main(config_file, plot_tag, road_boundary, is_task_ilqr):
 
   end_criterion = "failure"
 
-  yaw_constraints = [None, 0.5*np.pi, 0.4*np.pi]
+  yaw_constraints = [0.4*np.pi]
 
   out_folder = config_solver.OUT_FOLDER
 
