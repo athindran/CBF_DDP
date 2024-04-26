@@ -9,7 +9,7 @@ import copy
 import numpy as np
 
 from .base_policy import BasePolicy
-#from .ilqr_reachability_policy import iLQRReachability
+from .ilqr_reachability_policy import iLQRReachability
 from .ilqr_reachavoid_policy import iLQRReachAvoid
 from .ilqr_policy import iLQR
 
@@ -57,6 +57,10 @@ class iLQRSafetyFilter(iLQR):
       self.solver_0 = iLQRReachAvoid(self.id, self.config, self.rollout_dyn_0, self.cost)
       self.solver_1 = iLQRReachAvoid(self.id, self.config, self.rollout_dyn_1, self.cost)
       self.solver_2 = iLQRReachAvoid(self.id, self.config, self.rollout_dyn_1, self.cost)
+    elif self.config.COST_TYPE=="Reachability":
+      self.solver_0 = iLQRReachability(self.id, self.config, self.rollout_dyn_0, self.cost)
+      self.solver_1 = iLQRReachability(self.id, self.config, self.rollout_dyn_1, self.cost)
+      self.solver_2 = iLQRReachability(self.id, self.config, self.rollout_dyn_1, self.cost)
 
   def get_action(
       self, obs: np.ndarray, controls: Optional[np.ndarray] = None,
@@ -106,7 +110,8 @@ class iLQRSafetyFilter(iLQR):
     
     solver_info_0['Vopt_next'] = solver_info_1['Vopt']
     solver_info_0['marginopt_next'] = solver_info_1['marginopt']
-    solver_info_0['is_inside_target_next'] = solver_info_1['is_inside_target']
+    if self.config.COST_TYPE=="Reachavoid":
+      solver_info_0['is_inside_target_next'] = solver_info_1['is_inside_target']
 
     if(self.filter_type=="LR"):
       solver_info_0['barrier_filter_steps'] = self.barrier_filter_steps
@@ -123,7 +128,7 @@ class iLQRSafetyFilter(iLQR):
         solver_info_0['num_iters'] = 0
         solver_info_0['deviation'] = np.linalg.norm(control_0 - task_ctrl, ord=1)
         #print("Filtered control safe", control_0)
-        if solver_info_0['is_inside_target']:
+        if self.config.COST_TYPE=="Reachavoid" and solver_info_0['is_inside_target']:
           # Render the target set controlled invariant
           return stopping_ctrl, solver_info_0
         else:
@@ -203,7 +208,9 @@ class iLQRSafetyFilter(iLQR):
         _, solver_info_1 = self.solver_2.get_action(state_imaginary, controls=jnp.array( solver_info_1['controls'] ), **kwargs)
         solver_info_0['Vopt_next'] = solver_info_1['Vopt']
         solver_info_0['marginopt_next'] = solver_info_1['marginopt']
-        solver_info_0['is_inside_target_next'] = solver_info_1['is_inside_target']
+        
+        if self.config.COST_TYPE=="Reachavoid":
+          solver_info_0['is_inside_target_next'] = solver_info_1['is_inside_target']
 
         initial_control_jnp = jnp.array( initial_control[:, np.newaxis] )
 
@@ -240,7 +247,7 @@ class iLQRSafetyFilter(iLQR):
     solver_info_0['reinit_controls'] = solver_info_0['reinit_controls'].at[:, -1].set(self.dyn.ctrl_space[0, 0])    
     solver_info_0['mark_complete_filter'] = True
     solver_info_0['deviation'] = np.linalg.norm(control_0 - task_ctrl)
-    if solver_info_0['is_inside_target']:
+    if self.config.COST_TYPE=="Reachavoid" and solver_info_0['is_inside_target']:
         # Render the target set controlled invariant
         safety_control = stopping_ctrl
     else:

@@ -222,7 +222,7 @@ def make_yaw_report(prefix="./exps_may/ilqr/bic5D/yaw_testing/", plot_folder="./
                 rblist.append(rb)
 
                 if sh=='LR' and yc is None:
-                    showlist.append(False)
+                    showlist.append(True)
                 else:
                     showlist.append(True)                
             
