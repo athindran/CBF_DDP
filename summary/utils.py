@@ -222,7 +222,7 @@ def make_yaw_report(prefix="./exps_may/ilqr/bic5D/yaw_testing/", plot_folder="./
                 rblist.append(rb)
 
                 if sh=='LR' and yc is None:
-                    showlist.append(False)
+                    showlist.append(True)
                 else:
                     showlist.append(True)                
             
@@ -332,7 +332,7 @@ def make_yaw_report(prefix="./exps_may/ilqr/bic5D/yaw_testing/", plot_folder="./
                         ax.plot(state_data[barrier_filter_indices, 0], state_data[barrier_filter_indices, 1], 'x', color=colorlist[int(idx)], alpha=0.7, markersize=5.0)
     
             ax.legend(framealpha=0, fontsize=legend_fontsize, loc='upper left', 
-                      ncol=4, bbox_to_anchor=(0.0, 1.35), fancybox=False, shadow=False)
+                      ncol=3, bbox_to_anchor=(0.0, 1.35), fancybox=False, shadow=False)
 
             
             if hide_label:
