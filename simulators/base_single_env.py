@@ -251,8 +251,13 @@ class BaseSingleEnv(BaseEnv):
 
         target_plan = np.array( reachavoid_plan[:, 0:is_inside_target_index+1] )
 
+        stopping_ctrl = np.array([self.agent.dyn.ctrl_space[0, 0], 0])
+        if self.agent.dyn.ctrl_space.shape[0]==4:
+          stopping_ctrl = np.array([self.agent.dyn.ctrl_space[0, 0], self.agent.dyn.ctrl_space[1, 0], 0, 0])
+        elif self.agent.dyn.ctrl_space.shape[0]==3:
+          stopping_ctrl = np.array([self.agent.dyn.ctrl_space[0, 0], 0, 0])
         stopping_plan = self.simulate_stopping_plan( initial_state = np.array(reachavoid_plan[:, is_inside_target_index]), 
-                                      stopping_ctrl=np.array([self.agent.dyn.ctrl_space[0, 0], self.agent.dyn.ctrl_space[0, 0], 0, 0]))
+                                      stopping_ctrl=stopping_ctrl)
 
         safety_plan = np.concatenate((target_plan, np.array(stopping_plan).T), axis=1)
       else:

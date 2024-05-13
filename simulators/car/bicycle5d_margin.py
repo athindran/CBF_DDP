@@ -277,7 +277,10 @@ class Bicycle5DConstraintMargin( BaseMargin ):
     
     target_cost = jnp.inf
     
-    stopping_ctrl = jnp.array([self.plan_dyn.ctrl_space[0, 0]/2.0, self.plan_dyn.ctrl_space[0, 0]/2.0, 0., 0.])
+    if self.plan_dyn.dim_x<7:
+        stopping_ctrl = jnp.array([self.plan_dyn.ctrl_space[0, 0]/2.0, 0.0, 0.0])
+    else:
+        stopping_ctrl = jnp.array([self.plan_dyn.ctrl_space[0, 0]/2.0, self.plan_dyn.ctrl_space[0, 0]/2.0, 0., 0.])
     
     current_state = jnp.array( state )
 
@@ -373,8 +376,10 @@ class Bicycle5DConstraintMargin( BaseMargin ):
        return jacobian
     
     target_cost = jnp.inf
-    stopping_ctrl = jnp.array([self.plan_dyn.ctrl_space[0, 0]/2.0, self.plan_dyn.ctrl_space[0, 0]/2.0, 0., 0.])
-    
+    if self.plan_dyn.dim_x<7:
+        stopping_ctrl = jnp.array([self.plan_dyn.ctrl_space[0, 0], 0.0, 0.0])
+    else:
+        stopping_ctrl = jnp.array([self.plan_dyn.ctrl_space[0, 0], self.plan_dyn.ctrl_space[1, 0], 0., 0.])    
     current_state = jnp.array( state )
 
     c_x_target = jnp.zeros((self.plan_dyn.dim_x,))

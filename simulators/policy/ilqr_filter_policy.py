@@ -8,7 +8,7 @@ import numpy as np
 
 from .ilqr_reachavoid_policy import iLQRReachAvoid
 from .ilqr_policy import iLQR
-from .solver_utils import barrier_filter_linear, barrier_filter_quadratic, bicycle_linear_task_policy
+from .solver_utils import barrier_filter_linear, barrier_filter_quadratic, bicycle_linear_task_policy, barrier_filter_quadratic_ackerman
 
 from ..dynamics.base_dynamics import BaseDynamics
 from ..costs.base_margin import BaseMargin
@@ -59,7 +59,12 @@ class iLQRSafetyFilter(iLQR):
     # Cruise policy
     start_time = time.time()
     initial_state = np.array(kwargs['state'])
-    stopping_ctrl = np.array([self.dyn.ctrl_space[0, 0], self.dyn.ctrl_space[0, 0], 0, 0])
+    if(self.dyn.ctrl_space.shape[0]==4):
+      stopping_ctrl = np.array([self.dyn.ctrl_space[0, 0], self.dyn.ctrl_space[1, 0], 0, 0])
+    elif(self.dyn.ctrl_space.shape[0]==3):
+      stopping_ctrl = np.array([self.dyn.ctrl_space[0, 0], 0, 0])
+    elif(self.dyn.ctrl_space.shape[0]==2):
+      stopping_ctrl = np.array([self.dyn.ctrl_space[0, 0], 0])
 
     if self.config.is_task_ilqr:
       task_ctrl, _ = self.task_policy.get_action(obs, None, **kwargs)
@@ -182,7 +187,8 @@ class iLQRSafetyFilter(iLQR):
           p = grad_x.T @ B0u
           # Controls improvement direction
           #print(solver_initial)
-          control_correction = barrier_filter_quadratic(P, p, scaled_c, initialize=solver_initial)
+          #control_correction = barrier_filter_quadratic(P, p, scaled_c, initialize=solver_initial)
+          control_correction = barrier_filter_quadratic_ackerman(P, p, scaled_c, initialize=solver_initial)
         elif self.constraint_type=='linear':
           control_correction = barrier_filter_linear(grad_x, B0, scaled_c)
 

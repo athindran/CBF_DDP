@@ -50,6 +50,43 @@ def barrier_filter_quadratic(P, p, c, initialize):
       return np.array([0., 0., 0., 0.]) 
     return np.array([u[0].value, u[1].value, u[2].value, u[3].value])
 
+def barrier_filter_quadratic_ackerman(P, p, c, initialize): 
+    def is_neg_def(x):
+      # Check if a matrix is PSD
+      return np.all( np.real( np.linalg.eigvals(x) ) < 0) 
+
+    #CVX faces numerical difficulties otherwise
+    check_nd = is_neg_def(P)
+
+    # Check if P is PD
+    if(check_nd):
+      u = cp.Variable((3))
+      u.value = np.array( initialize )
+      P = np.array(P)
+      p = np.array(p)
+      
+      prob = cp.Problem( cp.Minimize(1.0*cp.square(u[0]) + 1.0*cp.square(u[1]) + 1.0*cp.square(u[2])),
+                    [ cp.quad_form(u, P) + p.T@u + c >=0 ] )
+      try:
+        prob.solve(verbose=False, warm_start=True)
+      except SolverError:
+        pass
+    
+    if(not check_nd or u[0] is None or prob.status not in ["optimal","optimal_inaccurate"]):
+      u = cp.Variable((3))
+      u.value = np.array( initialize )
+      p = np.array(p)
+      prob = cp.Problem( cp.Minimize(1.0*cp.square(u[0]) + 1.0*cp.square(u[1]) + 1.0*cp.square(u[2])),
+                      [ p @ u + c >= 0] )
+      try:
+        prob.solve(verbose=False, warm_start=True)
+      except SolverError:
+        pass
+      
+    if prob.status not in ["optimal","optimal_inaccurate"] or u[0] is None:
+      return np.array([0., 0., 0., 0.]) 
+    return np.array([u[0].value, u[1].value, u[2].value])
+
 # Unused as we started using iLQR task policy
 def bicycle_linear_task_policy( run_env_obs ):
     lookahead_distance = 4.0
