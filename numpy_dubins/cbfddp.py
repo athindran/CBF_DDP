@@ -70,33 +70,24 @@ def run_barrier_ilq(
 
         barrier_start_time = time.time()
 
-        control_safe_1, solver_dict_plan_1, constraints_data_plan_1 = lq_policy_1.get_action(
+        # Run first trajectory optimization
+        control_safe_1, solver_dict_plan_1, _ = lq_policy_1.get_action(
             np.array(run_env_obs), initial_controls=reinit_controls)
-
-        control_perf = task_policy(plan_env_1, run_env_obs)
-
         safe_controls_ilq[time_step] = control_safe_1
 
+        # Run one counterfactual step with task policy
+        control_perf = task_policy(plan_env_1, run_env_obs)
         imag_obs, control_perf = plan_env_2.step(run_env_obs, control_perf)
 
+        # Initialize controls and perform second trajectory optimization
         boot_controls = solver_dict_plan_1['controls']
         boot_controls[0:-1] = boot_controls[1:]
         _, solver_dict_plan_2, constraints_data_plan_2 = lq_policy_2.get_action(
             np.array(imag_obs), initial_controls=boot_controls)
         boot_controls = solver_dict_plan_2['controls']
 
-        control_cbf = control_perf
-
-        constraint_violation = solver_dict_plan_2['reachable_margin'] - gamma * (
-            solver_dict_plan_1['reachable_margin'])
-        scaled_c = constraint_violation
-
-        if constraint_violation < 0:
-            solver_dict_plan_2['task_active'] = False
-        else:
-            solver_dict_plan_2['task_active'] = True
-
         if animate:
+            # Animation creation overheads.
             solver_dict_plan_2['trace_id'] = 'Barrier'
             solver_dict_plan_2['title'] = 'Barrier filtering'
             solver_dict_plan_2['trace_label'] = "CBF-DDP" + \
@@ -120,13 +111,26 @@ def run_barrier_ilq(
                 road_boundary=env.road_boundary,
                 animate=True)
 
-        _, Bd, _, _ = plan_env_2.get_jacobian(run_env_obs, control_cbf)
+        # Initialize for DDP-CBF QCQP optimization
+        control_cbf_candidate = control_perf.copy()
+        constraint_violation = solver_dict_plan_2['reachable_margin'] - gamma * (
+            solver_dict_plan_1['reachable_margin'])
+        scaled_c = constraint_violation
 
+        if constraint_violation < 0:
+            solver_dict_plan_2['task_active'] = False
+        else:
+            solver_dict_plan_2['task_active'] = True
+
+        _, Bd, _, _ = plan_env_2.get_jacobian(run_env_obs, control_cbf_candidate)
+
+        # Initializing barrier process time if while loop is never entered
         barrier_process_time = time.time() - barrier_start_time
         barrier_entries = 0
 
         eps_regularization = 1e-8
 
+        # Obtain P and p for DDPCBF optimization from rollout.
         P = -eps_regularization * \
             np.eye(lq_policy_1.action_dim) + Bd.T @ constraints_data_plan_2['V_xx'] @ Bd
         p = Bd.T @ constraints_data_plan_2['V_x']
@@ -138,19 +142,22 @@ def run_barrier_ilq(
                 control_correction = -p * scaled_c / ((p_norm)**2 + 1e-12)
             else:
                 control_correction = barrier_filter_quadratic(P, p, scaled_c)
-            control_cbf_new = control_cbf + control_correction
+            # Update filtered control
+            control_cbf_updated_candidate = control_cbf_candidate + control_correction
 
             # Testing barrier quality
-            imag_obs_2, control_cbf_new = plan_env_2.step(
-                run_env_obs, control_cbf_new)
+            imag_obs_2, control_cbf_updated_candidate = plan_env_2.step(
+                run_env_obs, control_cbf_updated_candidate)
             _, solver_dict_plan_3, constraints_data_plan_3 = lq_policy_2.get_action(
                 np.array(imag_obs_2), initial_controls=boot_controls)
 
+            # Re-initialize and re-optimize after scaling constraint violation
             solver_dict_plan_2 = solver_dict_plan_3
             constraints_data_plan_2 = constraints_data_plan_3
-            control_cbf = control_cbf_new
+            control_cbf_candidate = control_cbf_updated_candidate
 
-            _, Bd, _, _ = plan_env_2.get_jacobian(run_env_obs, control_cbf)
+            # Re-optimization setup
+            _, Bd, _, _ = plan_env_2.get_jacobian(run_env_obs, control_cbf_candidate)
             P = -eps_regularization * \
                 np.eye(lq_policy_1.action_dim) + Bd.T @ constraints_data_plan_2['V_xx'] @ Bd
             p = Bd.T @ constraints_data_plan_2['V_x']
@@ -169,23 +176,24 @@ def run_barrier_ilq(
                 solver_dict_plan_2['margin'],
                 solver_dict_plan_2['t_process']))
 
+        # If DDP-CBF is failing despite iterations, fallback to DDP-LR filtering.
         if (solver_dict_plan_2['reachable_margin'] <= 0):
             complete_filter_indices.append(time_step)
-            control = control_safe_1
-            reinit_controls = solver_dict_plan_1['controls']
+            filtered_control = control_safe_1
+            reinit_controls = np.array(solver_dict_plan_1['controls'])
             complete_filter_steps = complete_filter_steps + 1
             if solver_dict_plan_1['critical_constraint_type'] > 1:
                 yaw_filter_indices.append(time_step)
             types_ilq[time_step] = 1
         else:
-            control = control_cbf
-            reinit_controls = solver_dict_plan_2['controls']
+            filtered_control = control_cbf_candidate
+            reinit_controls = np.array(solver_dict_plan_2['controls'])
             if (barrier_entries > 0):
                 barrier_filter_indices.append(time_step)
                 barrier_filter_steps = barrier_filter_steps + 1
                 types_ilq[time_step] = 2
 
-        run_env_obs, control_clip = run_env.step(run_env_obs, control)
+        run_env_obs, control_clip = run_env.step(run_env_obs, filtered_control)
 
         states_ilq[time_step] = np.array(run_env_obs)
         safe_controls_ilq[time_step] = control_safe_1
@@ -201,9 +209,9 @@ def run_barrier_ilq(
                 time_step,
                 barrier_process_time))
 
-        if run_env_obs.size > 3 and (
-                run_env_obs[1] > env.track_length or run_env_obs[2] < env.vmin):
-            break
+        #if run_env_obs.size > 3 and (
+        #        run_env_obs[1] > env.track_length or run_env_obs[2] < env.vmin):
+        #    break
 
     solver_dict = {
         "states": states_ilq,
