@@ -10,8 +10,8 @@ import os
 def find_jerk(controls, time_delta):
     x_jerk = np.abs(controls[1:, 0] - controls[0:-1, 0])
     y_jerk = np.abs(controls[1:, 1] - controls[0:-1, 1])
-    x_jerk = np.divide(x_jerk, time_delta)
-    y_jerk = np.divide(y_jerk, time_delta)
+    #x_jerk = np.divide(x_jerk, time_delta)
+    #y_jerk = np.divide(y_jerk, time_delta)
     mean_x_jerk = np.mean( x_jerk )
     mean_y_jerk = np.mean( y_jerk )
     std_x_jerk = np.std( x_jerk )
