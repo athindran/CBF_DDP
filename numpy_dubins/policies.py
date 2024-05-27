@@ -1,6 +1,4 @@
 import numpy as np
-import scipy
-import scipy.spatial
 import time
 
 
@@ -45,7 +43,6 @@ class ReachabilityLQPolicy:
             K_closed_loop,
             k_open_loop,
             alpha=1.0):
-        margins = np.zeros((self.horizon, ))
         new_states = np.array(nominal_states)
         new_controls = np.array(nominal_controls)
 
@@ -72,18 +69,18 @@ class ReachabilityLQPolicy:
 
         t = self.horizon - 1
         # Find margin over truncated horizon
-        while t > -1:
+        while t >= 0:
             obs_curr = nominal_states[t:t + 1]
             action_curr = nominal_controls[t:t + 1]
 
-            failure_margin, failure_index, failure_subindex = self.marginFunc.eval(
+            failure_margin, _, _ = self.marginFunc.eval(
                 obs_curr, action_curr)
-            state_margins[t] = failure_margin
+            state_margins[t] = failure_margin.ravel()[0]
 
             if (failure_margin < reachable_margin):
                 critical_index = t
-                reachable_margin = failure_margin
-                critical_margin = failure_margin
+                reachable_margin = failure_margin.ravel()[0]
+                critical_margin = failure_margin.ravel()[0]
 
             reachable_margin = reachable_margin - 0.5 * \
                 nominal_controls[t] @ R @ nominal_controls[t]
@@ -93,8 +90,7 @@ class ReachabilityLQPolicy:
     def backward_pass(
             self,
             nominal_states,
-            nominal_controls,
-            print_index=True):
+            nominal_controls):
         # Perform an ILQ backward pass
         V_x = np.zeros((self.horizon + 1, self.state_dim))
         V_xx = np.zeros((self.horizon + 1, self.state_dim, self.state_dim))
@@ -108,20 +104,17 @@ class ReachabilityLQPolicy:
         margins = np.zeros((self.horizon, ))
         state_margins = np.zeros((self.horizon, ))
 
-        reg_mat = -self.eps * np.eye(self.action_dim)
-
         k_open_loop = np.zeros((self.horizon, self.action_dim))
         K_closed_loop = np.zeros(
             (self.horizon, self.action_dim, self.state_dim))
 
         index_lists = []
 
-        R = self.R
         reachable_margin = np.inf
 
         # Backward pass
         t = self.horizon - 1
-        while t > -1:
+        while t >= 0:
             obs_curr = nominal_states[t:t + 1]
             action_curr = nominal_controls[t:t + 1]
 
@@ -131,15 +124,14 @@ class ReachabilityLQPolicy:
             if (failure_margin < reachable_margin):
                 index_lists.append(
                     ["Failure", failure_index, failure_subindex])
-                active = "Failure"
-                reachable_margin = failure_margin
+                reachable_margin = failure_margin.ravel()[0]
             else:
                 index_lists.append(
                     ["Propagate", failure_index, failure_subindex])
             reachable_margin = reachable_margin - 0.5 * \
-                nominal_controls[t] @ R @ nominal_controls[t]
+                nominal_controls[t] @ self.R @ nominal_controls[t]
             margins[t] = reachable_margin
-            state_margins[t] = failure_margin
+            state_margins[t] = failure_margin.ravel()[0]
             t = t - 1
 
         t = self.horizon - 1
@@ -153,28 +145,28 @@ class ReachabilityLQPolicy:
                 obs_curr, action_curr, current_index[1], current_index[2])
             c_xx_failure = self.marginFunc.dcdx2(
                 obs_curr, action_curr, current_index[1], current_index[2])
-            Ad, Bd, Ac, Bc = self.env.get_jacobian(
+            Ad, Bd, _, _ = self.env.get_jacobian(
                 obs_curr.ravel(), action_curr.ravel())
 
             if (current_index[0] == "Failure"):
-                Q_x[t] = c_x_failure
-                Q_xx[t] = c_xx_failure
-                Q_u[t] = -R @ nominal_controls[t] + Bd.T @ V_x[t + 1]
+                Q_x[t] = np.array(c_x_failure)
+                Q_xx[t] = np.array(c_xx_failure)
+                Q_u[t] = -self.R @ nominal_controls[t] + Bd.T @ V_x[t + 1]
                 Q_ux[t] = Bd.T @ V_xx[t + 1] @ Ad
-                Q_uu[t] = -R @ np.eye(action_curr.size) + \
+                Q_uu[t] = -self.R @ np.eye(action_curr.size) + \
                     Bd.T @ V_xx[t + 1] @ Bd
-                Q_uu_delta = -R @ np.eye(action_curr.size) + Bd.T @ (
+                Q_uu_delta = -self.R @ np.eye(action_curr.size) + Bd.T @ (
                     V_xx[t + 1] - self.eps * np.eye(self.state_dim)) @ Bd
                 Q_ux_delta = Bd.T @ (V_xx[t + 1] -
                                      self.eps * np.eye(self.state_dim)) @ Ad
             else:
                 Q_x[t] = Ad.T @ V_x[t + 1]
                 Q_xx[t] = Ad.T @ V_xx[t + 1] @ Ad
-                Q_u[t] = -R @ nominal_controls[t] + Bd.T @ V_x[t + 1]
+                Q_u[t] = -self.R @ nominal_controls[t] + Bd.T @ V_x[t + 1]
                 Q_ux[t] = Bd.T @ V_xx[t + 1] @ Ad
-                Q_uu[t] = -R @ np.eye(action_curr.size) + \
+                Q_uu[t] = -self.R @ np.eye(action_curr.size) + \
                     Bd.T @ V_xx[t + 1] @ Bd
-                Q_uu_delta = -R @ np.eye(action_curr.size) + Bd.T @ (
+                Q_uu_delta = -self.R @ np.eye(action_curr.size) + Bd.T @ (
                     V_xx[t + 1] - self.eps * np.eye(self.state_dim)) @ Bd
                 Q_ux_delta = Bd.T @ (V_xx[t + 1] -
                                      self.eps * np.eye(self.state_dim)) @ Ad
@@ -187,10 +179,8 @@ class ReachabilityLQPolicy:
 
             # Update value function derivative for the previous time step
             if (current_index[0] == "Failure"):
-                V_x_critical = c_x_failure
-                V_xx_critical = c_xx_failure
-                # V_x[t] = c_x_failure
-                # V_xx[t] = c_xx_failure
+                V_x_critical = np.copy(c_x_failure)
+                V_xx_critical = np.copy(c_xx_failure)
                 V_x[t] = Q_x[t] + Q_ux[t].T @ k_open_loop[t]
                 V_xx[t] = Q_xx[t] + Q_ux[t].T @ K_closed_loop[t]
             else:
@@ -217,12 +207,12 @@ class ReachabilityLQPolicy:
             initial_controls = np.zeros((self.horizon, self.action_dim))
             initial_controls[:, 0] = 0.01
 
-        states, controls, margins = self.initialize_trajectory(
+        states, controls, _ = self.initialize_trajectory(
             initial_state, initial_controls)
 
         # Update control with ILQ updates
         iters = 0
-        J, critical_margin, state_margins, critical_index = self.get_margin(
+        J, critical_margin, _, _ = self.get_margin(
             states, controls)
 
         converged = False
@@ -235,8 +225,8 @@ class ReachabilityLQPolicy:
         while iters < self.max_iters and not converged:
             iters = iters + 1
             # Backward pass
-            K_closed_loop, k_open_loop, barrier_constraints_data = self.backward_pass(
-                states, controls, False)
+            K_closed_loop, k_open_loop, _ = self.backward_pass(
+                states, controls)
 
             # Choose the best alpha scaling using appropriate line search
             # methods
@@ -247,7 +237,7 @@ class ReachabilityLQPolicy:
                 J_new = J
                 break
 
-            states, controls, J_new, critical_margin, state_margins, critical_index = self.forward_pass(
+            states, controls, J_new, critical_margin, _, _ = self.forward_pass(
                 states, controls, K_closed_loop, k_open_loop, alpha_chosen)
 
             convergence_sequence.append(critical_margin)
@@ -258,8 +248,8 @@ class ReachabilityLQPolicy:
             J = J_new
 
         # Backward pass
-        K_closed, K_open, updated_constraints_data = self.backward_pass(
-            states, controls, False)
+        _, _, updated_constraints_data = self.backward_pass(
+            states, controls)
 
         process_time = time.time() - start_time
         solver_dict = {
@@ -288,7 +278,7 @@ class ReachabilityLQPolicy:
             beta=0.3):
         alpha = 1.0
         while alpha > 1e-13:
-            X, U, J_new, critical_new, _, _ = self.forward_pass(
+            _, _, J_new, _, _, _ = self.forward_pass(
                 states, controls, K_closed_loop, k_open_loop, alpha)
 
             # Accept if there is improvement
@@ -314,10 +304,8 @@ class ReachabilityLQPolicy:
 
         alpha_converged = False
 
-        margin_old = state_margins[critical_index]
-
         while not alpha_converged:
-            X, U, J_new, critical_margin_new, state_margins_new, critical_index_new = self.forward_pass(
+            X, _, J_new, _, _, _ = self.forward_pass(
                 states, controls, K_closed_loop, k_open_loop, alpha)
 
             # cu is zero so we propagate cx one step back and use Qu as
@@ -357,7 +345,7 @@ class ReachabilityLQPolicy:
 
         margin_old = state_margins[critical_index]
         while not alpha_converged:
-            X, U, J_new, critical_margin_new, state_margins_new, critical_index_new = self.forward_pass(
+            X, _, J_new, _, state_margins_new, _ = self.forward_pass(
                 states, controls, K_closed_loop, k_open_loop, alpha)
 
             # Find new state margin at old critical point
@@ -385,7 +373,6 @@ class ReachabilityLQPolicy:
 
             # Actual decrease and approximated decrease.
             delta_margin_quadratic_actual = margin_new - margin_old
-            error = delta_margin_quadratic_approx - delta_margin_quadratic_actual
 
             if delta_margin_quadratic_approx != 0:
                 rho = delta_margin_quadratic_actual / delta_margin_quadratic_approx
