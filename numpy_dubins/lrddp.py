@@ -119,11 +119,9 @@ def run_lr_ilq(
                 save_prefix=str(time_step),
                 save_folder=plot_folder +
                 "lr_ilq_progress/",
-                flipped=env.full_controls,
                 xlimits=env.xlimits,
                 ylimits=env.ylimits,
                 ego_radius=env.ego_radius,
-                road_boundary=env.road_boundary,
                 animate=True)
 
         run_env_obs, control_clip = run_env.step(run_env_obs, control)

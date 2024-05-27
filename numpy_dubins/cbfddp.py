@@ -86,6 +86,18 @@ def run_barrier_ilq(
             np.array(imag_obs), initial_controls=boot_controls)
         boot_controls = solver_dict_plan_2['controls']
 
+        # Initialize for DDP-CBF QCQP optimization
+        control_cbf_candidate = control_perf.copy()
+        constraint_violation = solver_dict_plan_2['reachable_margin'] - gamma * (
+            solver_dict_plan_1['reachable_margin'])
+        scaled_c = constraint_violation
+
+        # Auxiliary storage for animation
+        if constraint_violation < 0:
+            solver_dict_plan_2['task_active'] = False
+        else:
+            solver_dict_plan_2['task_active'] = True
+
         if animate:
             # Animation creation overheads.
             solver_dict_plan_2['trace_id'] = 'Barrier'
@@ -104,23 +116,10 @@ def run_barrier_ilq(
                 save_prefix=str(time_step),
                 save_folder=plot_folder +
                 "barrier_ilq_progress/",
-                flipped=env.full_controls,
                 xlimits=env.xlimits,
                 ylimits=env.ylimits,
                 ego_radius=env.ego_radius,
-                road_boundary=env.road_boundary,
                 animate=True)
-
-        # Initialize for DDP-CBF QCQP optimization
-        control_cbf_candidate = control_perf.copy()
-        constraint_violation = solver_dict_plan_2['reachable_margin'] - gamma * (
-            solver_dict_plan_1['reachable_margin'])
-        scaled_c = constraint_violation
-
-        if constraint_violation < 0:
-            solver_dict_plan_2['task_active'] = False
-        else:
-            solver_dict_plan_2['task_active'] = True
 
         _, Bd, _, _ = plan_env_2.get_jacobian(run_env_obs, control_cbf_candidate)
 

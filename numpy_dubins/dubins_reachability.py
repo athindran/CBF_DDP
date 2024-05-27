@@ -139,10 +139,10 @@ if run:
         barrier_scaling=barrier_scaling,
         Rc=Rc,
         plot_folder=plot_folder,
-        animate=False)
+        animate=True)
 
     fig_prog_folder = plot_folder + "barrier_ilq_progress/"
-    #make_animation(fig_prog_folder, solver_dict_barrier_1['run_steps'])
+    make_animation(fig_prog_folder, solver_dict_barrier_1['run_steps'])
 
     # helper_plot([ solver_dict_barrier_1, solver_dict_hcbf ], save_prefix="barrier_shield_receding_",
     # save_folder = plot_folder + "param_" + str(gamma_l) + "," + str(Rc)+"/",
@@ -162,7 +162,7 @@ if run:
         task_policy=dubins_task_policy,
         Rc=Rc,
         plot_folder=plot_folder,
-        animate=False)
+        animate=True)
 
     pickle.dump(
         solver_dict_lr_1,
@@ -171,7 +171,7 @@ if run:
             "wb"))
 
     fig_prog_folder = plot_folder + "lr_ilq_progress/"
-    #make_animation(fig_prog_folder, solver_dict_lr_1['run_steps'])
+    make_animation(fig_prog_folder, solver_dict_lr_1['run_steps'])
 
     # helper_plot([ solver_dict_lr_1, solver_dict_barrier_1, solver_dict_hcbf  ], save_prefix="barrier_shield_receding_",
     # save_folder = plot_folder + "param_" + str(gamma_l) + "," + str(Rc)+"/",
@@ -199,18 +199,14 @@ if plotting:
                             solver_dict_lr_1],
                            obstacle_list=obstacle_list,
                            obstacle_radius=obstacle_radius,
-                           value_plot=True,
-                           flipped=False,
                            xlimits=[-3.5,
                                     2.0],
                            ylimits=[-0.2,
                                     3.5],
                            ego_radius=0.15,
-                           marginFunc=None,
                            show_legend=True,
                            show_label=show_label,
-                           legend_fontsize=10,
-                           label_size=10)
+                           legend_fontsize=10)
 
 # plt.tight_layout()
 ax[0].set_yticks(ticks=np.array([-1.5, 3.0]),
