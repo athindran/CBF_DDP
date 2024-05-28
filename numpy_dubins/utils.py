@@ -49,7 +49,7 @@ def barrier_filter_quadratic_one(P, p, c):
             pass
 
     if prob.status not in ["optimal", "optimal_inaccurate"] or u[0] is None:
-        return np.array([0., 0.])
+        return np.array([0.])
     return np.array([u[0].value])
 
 
