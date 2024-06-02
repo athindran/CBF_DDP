@@ -207,7 +207,7 @@ class BaseSingleEnv(BaseEnv):
         state_history.append(self.state)
 
         prev_sol = None
-        prev_action = np.array([0.0])
+        prev_action = np.array([0.0, 0.0])
         for t in range(T_rollout):
             #kwargs['state'] = self.state.copy()
             action, solver_info = self.agent.get_action(
