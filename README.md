@@ -1,5 +1,7 @@
 # Fast, Smooth and Safe - LCSS + CDC submission
 
+[This Code is not actively maintained anymore]
+
 For the license, please use https://github.com/SafeRoboticsLab/CBF_DDP 
 ## Introduction
 This code is the companion to results in https://sites.google.com/view/fsslcss/home .
