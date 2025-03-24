@@ -3,6 +3,7 @@ from typing import Any, Tuple, Optional, Callable, List, Dict, Union
 import numpy as np
 from gym import spaces
 from tqdm import tqdm
+import copy
 
 from .agent import Agent
 from .base_env import BaseEnv
@@ -265,12 +266,18 @@ class BaseSingleEnv(BaseEnv):
 
                 safety_plan = np.concatenate(
                     (target_plan, np.array(stopping_plan).T), axis=1)
+
+                task_plan = self.simulate_task_plan(initial_state=solver_info['states'][:, 0], 
+                                                    task_policy=copy.deepcopy(self.agent.policy.task_policy), 
+                                                    nsteps=self.agent.policy.N, 
+                                                    is_ilqr=self.agent.policy.config.is_task_ilqr)
             else:
                 safety_plan = None
+                task_plan = None
 
             if rollout_step_callback is not None:
                 rollout_step_callback(
-                    self, state_history, action_history, plan_history, step_history, safety_plan=safety_plan
+                    self, state_history, action_history, plan_history, step_history, safety_plan=safety_plan, task_plan=task_plan
                 )
 
             # Checks termination criterion.
@@ -321,19 +328,20 @@ class BaseSingleEnv(BaseEnv):
         """
           UNUSED: Simulates the task plan from an initial state
         """
-        states = [initial_state]
+        states = np.zeros((initial_state.size, nsteps))
+        states[:, 0] = initial_state
         current_state = np.array(initial_state)
         idx = 0
-        while idx < nsteps:
+        while idx < nsteps - 1:
             idx = idx + 1
             if is_ilqr:
-                task_ctrl = task_policy.get_action(
+                task_ctrl, _ = task_policy.get_action(
                     current_state, None, state=current_state)
             else:
                 task_ctrl = task_policy(current_state)
             current_state, _ = self.agent.integrate_forward(
                 current_state, task_ctrl)
-            states.append(current_state)
+            states[:, idx] = current_state
 
         return states
 

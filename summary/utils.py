@@ -117,7 +117,7 @@ def plot_run_summary(dyn_id, env, state_history, action_history, config_solver, 
     #plt.xlabel('Time step')
     #fig.savefig(os.path.join(fig_folder, "auxiliary_cbfiters.png"), dpi=200)
 
-def make_animation_plots(env, state_history, solver_info, safety_plan, config_solver, 
+def make_animation_plots(env, state_history, solver_info, safety_plan, task_plan, config_solver, 
                          fig_prog_folder="./"):
     fig, ax = plt.subplots(
         1, 1, figsize=(config_solver.FIG_SIZE_X, config_solver.FIG_SIZE_Y)
@@ -152,15 +152,21 @@ def make_animation_plots(env, state_history, solver_info, safety_plan, config_so
     # plan.
     if safety_plan is not None:
         ax.plot(
-            safety_plan[0, :], safety_plan[1, :], linewidth=0.5,
-            c='g', label='Safety plan'
+            safety_plan[0, :], safety_plan[1, :], linewidth=0.8,
+            c='k', label='Safety plan'
+        )
+
+    if task_plan is not None:
+        ax.plot(
+            task_plan[0, :], task_plan[1, :], linewidth=0.8,
+            c='c', label='Task plan'
         )
 
     # historyory.
     sc = ax.scatter(
         states[0, :-1], states[1, :-1], s=24, c=c_trace, marker='o'
     )
-    ax.legend(fontsize=8, loc='upper left', bbox_to_anchor=(0.05, 1.18), fancybox=False)
+    ax.legend(fontsize=8, loc='upper left', bbox_to_anchor=(0.05, 1.30), fancybox=False)
     
     ax.set_xticks(ticks=[0, env.visual_extent[1]], labels=[0, env.visual_extent[1]], fontsize=8)
     ax.set_yticks(ticks=[env.visual_extent[2], env.visual_extent[3]], 

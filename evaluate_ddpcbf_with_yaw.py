@@ -121,6 +121,7 @@ def main(config_file, plot_tag, road_boundary, is_task_ilqr):
             state_history,
             solver_info,
             kwargs['safety_plan'],
+            kwargs['task_plan'],
             config_solver,
             fig_prog_folder)
 
