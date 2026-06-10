@@ -63,31 +63,38 @@ def plot_run_summary(dyn_id, env, state_history, action_history, config_solver, 
 
     if dyn_id=="Bicycle5D":
       fig, axes = plt.subplots(
-        1, 3, figsize=(16.0, 3.4)
+        1, 2, figsize=(8.0, 2.4)
       )
-      ax = axes[0]
-      ax.plot(kwargs["value_history"])
-      ax.set_xlabel("Timestep")
-      ax.set_ylabel("Receding Value function")
-      ax.set_xticks(ticks=[0, ctrls.shape[1]], labels=[0, ctrls.shape[1]], fontsize=8)
+    #   ax = axes[0]
+    #   ax.plot(kwargs["value_history"])
+    #   ax.set_xlabel("Timestep")
+    #   ax.set_ylabel("Receding Value function")
+    #   ax.set_xticks(ticks=[0, ctrls.shape[1]], labels=[0, ctrls.shape[1]], fontsize=8)
+      dt_step = env.agent.dyn.dt
+      times = np.arange(0, ctrls.shape[1])*dt_step
 
-      ax = axes[1]
-      ax.plot(ctrls[0, :])
-      ax.set_xlabel("Timestep")
+      ax = axes[0]
+      ax.plot(times, ctrls[0, :])
+      ax.set_xlabel("Time (s)")
       ax.set_ylabel("Acceleration control")
-      ax.set_xticks(ticks=[0, ctrls.shape[1]], labels=[0, ctrls.shape[1]], fontsize=8)
+      ax.set_xticks(ticks=[0, ctrls.shape[1] * dt_step], labels=[0, ctrls.shape[1] * dt_step], fontsize=8)
       ax.set_yticks(ticks=[action_space[0, 0], action_space[0, 1]], 
                     labels=[action_space[0, 0], action_space[0, 1]], fontsize=8)
+      ax.xaxis.set_label_coords(.5, -.05)
+      ax.yaxis.set_label_coords(-0.05, 0.5)
 
-      ax = axes[2]
-      ax.plot(ctrls[1, :])
-      ax.set_xlabel("Timestep")
+      ax = axes[1]
+      ax.plot(times, ctrls[1, :])
+      ax.set_xlabel("Time (s)")
       ax.set_ylabel("Steering control")
-      ax.set_xticks(ticks=[0, ctrls.shape[1]], labels=[0, ctrls.shape[1]], fontsize=8)
+      ax.set_xticks(ticks=[0, ctrls.shape[1] * dt_step], labels=[0, ctrls.shape[1] * dt_step], fontsize=8)
       ax.set_yticks(ticks=[action_space[1, 0], action_space[1, 1]], 
                     labels=[action_space[1, 0], action_space[1, 1]], fontsize=8)
+      ax.xaxis.set_label_coords(.5, -.05)
+      ax.yaxis.set_label_coords(-0.05, 0.5)
 
-      fig.savefig(os.path.join(fig_folder, "auxiliary_controls.png"), dpi=200)
+      fig.savefig(os.path.join(fig_folder, "auxiliary_controls.png"), dpi=300)
+      fig.savefig(os.path.join(fig_folder, "auxiliary_controls.pdf"), dpi=300)
 
     fig, axes = plt.subplots(
         1, 2, figsize=(10.0, 2.5)

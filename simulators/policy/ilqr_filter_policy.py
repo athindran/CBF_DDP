@@ -3,7 +3,7 @@ import time
 
 import jax
 from jax import numpy as jnp
-from jaxlib.xla_extension import DeviceArray
+from jax import Array as DeviceArray
 
 import copy
 import numpy as np

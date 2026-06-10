@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 import jax
 from jax import numpy as jnp
-from jaxlib.xla_extension import DeviceArray
+from jax import Array as DeviceArray
 
 from .agent import Agent
 from .base_env import BaseEnv
